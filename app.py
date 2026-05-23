@@ -15,7 +15,7 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;900&display=swap');
 
 html, body, [class*="css"] { font-family: 'Noto Sans KR', sans-serif; }
-.stApp { background: #0f0f1a; }
+.stApp { background: #f0f2f8; }
 .block-container { padding: 1.5rem 2rem 2rem 2rem !important; max-width: 1300px; }
 
 /* ── 제목 pill ── */
@@ -29,24 +29,23 @@ html, body, [class*="css"] { font-family: 'Noto Sans KR', sans-serif; }
 
 /* ── 카테고리 탭 바 ── */
 .stButton > button[kind="secondary"] {
-    background: rgba(255,255,255,0.08) !important;
-    border: 2px solid rgba(255,255,255,0.2) !important;
-    color: #ccc !important;
+    background: rgba(255,255,255,0.15) !important;
+    border: 2px solid rgba(255,255,255,0.4) !important;
+    color: #111 !important;
 }
 
 /* ── 2×2 메서드 카드 ── */
 .method-card {
-    background: #1e1e32; border-radius: 18px; min-height: 190px;
+    background: #b8c4e0; border-radius: 18px; min-height: 190px;
     padding: 1.8rem 1.5rem 1.5rem; cursor: pointer;
     transition: transform 0.15s, box-shadow 0.15s;
     display: flex; flex-direction: column; justify-content: space-between;
     position: relative; overflow: hidden;
-    border: 1px solid rgba(255,255,255,0.08);
 }
-.method-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.4); }
-.method-card-title { font-size: 1.55rem; font-weight: 900; color: white; text-shadow: 0 2px 8px rgba(0,0,0,0.4); }
-.method-card-desc  { font-size: 0.82rem; color: rgba(255,255,255,0.6); margin-top:0.4rem; font-weight:600; }
-.method-card-emoji { position:absolute; bottom:1rem; right:1.2rem; font-size:3rem; opacity:0.2; }
+.method-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.15); }
+.method-card-title { font-size: 1.55rem; font-weight: 900; color: #111; text-shadow: none; }
+.method-card-desc  { font-size: 0.82rem; color: #333; margin-top:0.4rem; font-weight:600; }
+.method-card-emoji { position:absolute; bottom:1rem; right:1.2rem; font-size:3rem; opacity:0.3; }
 
 /* ── 결과 카드 ── */
 .result-card {
@@ -71,48 +70,39 @@ html, body, [class*="css"] { font-family: 'Noto Sans KR', sans-serif; }
 
 /* ── 월드컵 ── */
 .wc-option {
-    background:#1e1e32; border:3px solid #333; border-radius:16px;
+    background:white; border:3px solid #ddd; border-radius:16px;
     padding:1.8rem 1.2rem; text-align:center;
     transition:all 0.18s;
 }
-.wc-option:hover { border-color:#667eea; background:#252540; }
+.wc-option:hover { border-color:#667eea; background:#f8f0ff; }
 .wc-emoji { font-size:2.5rem; }
-.wc-name  { font-size:1.3rem; font-weight:800; margin:0.5rem 0; color:#f0f0ff; }
-.wc-cal   { font-size:0.85rem; color:#666; }
+.wc-name  { font-size:1.3rem; font-weight:800; margin:0.5rem 0; color:#1a1a2e; }
+.wc-cal   { font-size:0.85rem; color:#aaa; }
 
 /* ── 이력 아이템 ── */
 .hist-item {
-    background:#1a1a2e; border-radius:10px; padding:0.7rem 1rem; margin:0.3rem 0;
+    background:white; border-radius:10px; padding:0.7rem 1rem; margin:0.3rem 0;
     border-left:4px solid #667eea; display:flex; justify-content:space-between;
-    align-items:center; box-shadow:0 2px 6px rgba(0,0,0,0.3); font-size:0.88rem;
-    color:#ccc;
+    align-items:center; box-shadow:0 2px 6px rgba(0,0,0,0.05); font-size:0.88rem;
+    color:#111;
 }
 
 /* ── 맛집 카드 ── */
 .rest-card {
-    background:#1a1a2e; border-radius:14px; padding:1rem 1.3rem; margin:0.5rem 0;
-    box-shadow:0 4px 14px rgba(0,0,0,0.3); border-left:5px solid #f5576c;
-    color:#ccc;
+    background:white; border-radius:14px; padding:1rem 1.3rem; margin:0.5rem 0;
+    box-shadow:0 4px 14px rgba(0,0,0,0.07); border-left:5px solid #f5576c;
+    color:#111;
 }
 
-/* 다크 모드 텍스트 보정 */
+/* 라이트 모드 텍스트 */
 .stMarkdown, .stMarkdown p, label, .stMetric, .stSelectbox label,
 .stNumberInput label, .stTextInput label, .stCheckbox label,
 [data-testid="stMetricLabel"], [data-testid="stMetricValue"] {
-    color: #ccc !important;
+    color: #111 !important;
 }
-[data-testid="stMetricValue"] { color: #fff !important; }
+[data-testid="stMetricValue"] { color: #1a1a2e !important; }
 .stTabs [data-baseweb="tab-panel"] { background: transparent; }
-[data-baseweb="tab-list"] { background: #1a1a2e !important; border-radius: 12px; }
-[data-baseweb="tab"] { color: #aaa !important; }
-[aria-selected="true"][data-baseweb="tab"] { color: #fff !important; }
-.stSelectbox > div > div, .stTextInput > div > div > input,
-.stNumberInput > div > div > input {
-    background: #1e1e32 !important; color: #eee !important;
-    border-color: #333 !important;
-}
-hr { border-color: #333 !important; }
-.stAlert { background: #1e1e32 !important; color: #ccc !important; }
+hr { border-color: #ddd !important; }
 
 /* Streamlit 기본 요소 */
 #MainMenu, footer, header { visibility:hidden; }
@@ -468,8 +458,8 @@ st.markdown('<div class="title-pill-wrap"><div class="title-pill">🍽️ 오늘
 # ② 카테고리 탭 바
 # ─────────────────────────────────────────────────────────────
 st.markdown("""
-<div style="background:#1a1a2e;border-radius:14px;padding:0.55rem 0.8rem;margin-bottom:1rem;border:1px solid #333;">
-<span style="color:rgba(255,255,255,0.4);font-size:0.78rem;font-weight:700;margin-right:0.5rem">카테고리</span>
+<div style="background:#d966a0;border-radius:14px;padding:0.55rem 0.8rem;margin-bottom:1rem;">
+<span style="color:rgba(255,255,255,0.7);font-size:0.78rem;font-weight:700;margin-right:0.5rem">카테고리</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -500,8 +490,8 @@ cur_emoji = CATEGORY_EMOJI.get(st.session_state.active_cat, "🍽️")
 st.markdown(f"""
 <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;">
     <span style="font-size:1.6rem">{cur_emoji}</span>
-    <span style="font-size:1.25rem;font-weight:900;color:#e0e0ff">{st.session_state.active_cat}</span>
-    <span style="font-size:0.85rem;color:#666;margin-left:0.3rem">({len(menus)}개 메뉴)</span>
+    <span style="font-size:1.25rem;font-weight:900;color:#1a1a2e">{st.session_state.active_cat}</span>
+    <span style="font-size:0.85rem;color:#aaa;margin-left:0.3rem">({len(menus)}개 메뉴)</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -609,7 +599,7 @@ else:
         # ── 캔버스 스크래치 카드 (HTML + JS) ──
         scratch_html = f"""
 <div style="display:flex;flex-direction:column;align-items:center;gap:1rem;">
-  <p style="color:#aaa;font-size:0.95rem;margin:0">마우스(또는 손가락)로 긁어서 메뉴를 확인하세요!</p>
+  <p style="color:#555;font-size:0.95rem;margin:0">마우스(또는 손가락)로 긁어서 메뉴를 확인하세요!</p>
   <div style="position:relative;width:340px;height:200px;border-radius:20px;overflow:hidden;
               box-shadow:0 8px 32px rgba(0,0,0,0.5);">
     <!-- 아래 레이어: 결과 -->
@@ -627,7 +617,7 @@ else:
     <canvas id="scratch-canvas" width="340" height="200"
             style="position:absolute;inset:0;cursor:crosshair;border-radius:20px;touch-action:none"></canvas>
   </div>
-  <p id="hint-text" style="color:#666;font-size:0.82rem;margin:0">긁은 면적이 60%를 넘으면 자동 완성돼요</p>
+  <p id="hint-text" style="color:#555;font-size:0.82rem;margin:0">긁은 면적이 60%를 넘으면 자동 완성돼요</p>
 </div>
 
 <script>
@@ -636,44 +626,40 @@ else:
   const ctx     = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
 
-  // 긁힌 면적 트래킹용 오프스크린
-  const offscreen = document.createElement('canvas');
-  offscreen.width = W; offscreen.height = H;
-  const octx = offscreen.getContext('2d');
-
-  // 스크래치 레이어 그리기 (어두운 질감)
+  // 스크래치 레이어 그리기
   function drawScratchLayer(c) {{
     const grad = c.createLinearGradient(0,0,W,H);
-    grad.addColorStop(0,'#2a2a4a');
-    grad.addColorStop(0.5,'#3a2a5a');
-    grad.addColorStop(1,'#1a1a3a');
+    grad.addColorStop(0,'#c0b0e8');
+    grad.addColorStop(0.5,'#a890d8');
+    grad.addColorStop(1,'#9070c8');
     c.fillStyle = grad;
     c.fillRect(0,0,W,H);
-
     // 반짝이 패턴
-    c.fillStyle='rgba(255,255,255,0.03)';
-    for(let i=0;i<60;i++){{
+    c.fillStyle='rgba(255,255,255,0.18)';
+    for(let i=0;i<80;i++){{
       const x=Math.random()*W, y=Math.random()*H, r=Math.random()*3+1;
       c.beginPath(); c.arc(x,y,r,0,Math.PI*2); c.fill();
     }}
     // 텍스트
-    c.fillStyle='rgba(255,255,255,0.55)';
+    c.fillStyle='rgba(255,255,255,0.85)';
     c.font='bold 22px "Noto Sans KR",sans-serif';
     c.textAlign='center';
     c.fillText('🪙  긁어서 확인  🪙', W/2, H/2-10);
     c.font='14px "Noto Sans KR",sans-serif';
-    c.fillStyle='rgba(255,255,255,0.35)';
+    c.fillStyle='rgba(255,255,255,0.6)';
     c.fillText('Scratch here!', W/2, H/2+20);
   }}
 
   drawScratchLayer(ctx);
-  drawScratchLayer(octx);
-
   ctx.globalCompositeOperation = 'destination-out';
-  octx.globalCompositeOperation = 'destination-out';
 
-  let painting = false;
+  // getImageData 대신 긁은 원 면적 누적으로 60% 판정
+  const RADIUS = 28;
+  const TOTAL  = W * H;
+  const GRID   = 8; // 격자 셀 크기 (px) — 중복 제거용
+  const scratched = new Set(); // 격자 셀 키
   let revealed = false;
+  let painting = false;
 
   function getPos(e) {{
     const rect = canvas.getBoundingClientRect();
@@ -690,28 +676,39 @@ else:
     }};
   }}
 
+  function markCells(cx, cy) {{
+    // 반지름 안의 격자 셀을 Set에 추가
+    const r2 = RADIUS * RADIUS;
+    const x0 = Math.max(0, Math.floor((cx - RADIUS) / GRID));
+    const x1 = Math.min(Math.ceil(W / GRID), Math.ceil((cx + RADIUS) / GRID));
+    const y0 = Math.max(0, Math.floor((cy - RADIUS) / GRID));
+    const y1 = Math.min(Math.ceil(H / GRID), Math.ceil((cy + RADIUS) / GRID));
+    for (let gx = x0; gx <= x1; gx++) {{
+      for (let gy = y0; gy <= y1; gy++) {{
+        const px = gx * GRID + GRID/2, py = gy * GRID + GRID/2;
+        if ((px-cx)*(px-cx)+(py-cy)*(py-cy) <= r2) scratched.add(gx+','+gy);
+      }}
+    }}
+  }}
+
   function scratch(pos) {{
     ctx.beginPath();
-    ctx.arc(pos.x, pos.y, 28, 0, Math.PI*2);
+    ctx.arc(pos.x, pos.y, RADIUS, 0, Math.PI*2);
     ctx.fill();
-    octx.beginPath();
-    octx.arc(pos.x, pos.y, 28, 0, Math.PI*2);
-    octx.fill();
+    markCells(pos.x, pos.y);
     checkReveal();
   }}
 
   function checkReveal() {{
     if (revealed) return;
-    const data = octx.getImageData(0,0,W,H).data;
-    let cleared = 0;
-    for (let i=3; i<data.length; i+=4) {{ if (data[i]===0) cleared++; }}
-    const pct = cleared / (W*H);
-    if (pct > 0.60) {{
+    // 격자 셀 수 기준 비율
+    const totalCells = Math.ceil(W/GRID) * Math.ceil(H/GRID);
+    const pct = scratched.size / totalCells;
+    if (pct >= 0.60) {{
       revealed = true;
-      // 부드럽게 남은 캔버스 페이드아웃
       let op = 1;
       function fade() {{
-        op -= 0.06;
+        op -= 0.05;
         if (op <= 0) {{ canvas.style.display='none'; document.getElementById('hint-text').textContent='✨ 오늘의 메뉴!'; return; }}
         canvas.style.opacity = op;
         requestAnimationFrame(fade);
@@ -802,7 +799,7 @@ else:
                         ts["pair_idx"] += 1
                         st.rerun()
                 with col_vs:
-                    st.markdown('<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:130px;font-size:1.4rem;font-weight:900;color:#444">VS</div>',
+                    st.markdown('<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:130px;font-size:1.4rem;font-weight:900;color:#ccc">VS</div>',
                                 unsafe_allow_html=True)
                 with col_b:
                     st.markdown(f"""
@@ -836,7 +833,7 @@ else:
                         stars = "⭐" * int(r["rating"])
                         st.markdown(f"""
                         <div class="rest-card">
-                            <div style="font-size:1rem;font-weight:700;color:#eee">🍴 {r['name']}</div>
+                            <div style="font-size:1rem;font-weight:700;color:#111">🍴 {r['name']}</div>
                             <div style="color:#888;font-size:0.85rem;margin-top:0.3rem">
                                 {stars} {r['rating']} · 리뷰 {r['reviews']}개 · 📍 {r['address']}
                             </div>
@@ -866,8 +863,8 @@ with tab_hist:
         for h in st.session_state.history:
             st.markdown(f"""
             <div class="hist-item">
-                <div>{h['emoji']} <b style="color:#eee">{h['menu']}</b>
-                    <span style="color:#555;font-size:0.82rem"> &nbsp;·&nbsp; {h['time']} &nbsp;·&nbsp; {h['method']} &nbsp;·&nbsp; {h['cat']}</span>
+                <div>{h['emoji']} <b style="color:#111">{h['menu']}</b>
+                    <span style="color:#aaa;font-size:0.82rem"> &nbsp;·&nbsp; {h['time']} &nbsp;·&nbsp; {h['method']} &nbsp;·&nbsp; {h['cat']}</span>
                 </div>
                 <div style="color:#667eea;font-weight:700">{h['cal']} kcal</div>
             </div>
