@@ -15,7 +15,7 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;900&display=swap');
 
 html, body, [class*="css"] { font-family: 'Noto Sans KR', sans-serif; }
-.stApp { background: #f0f2f8; }
+.stApp { background: #0f0f1a; }
 .block-container { padding: 1.5rem 2rem 2rem 2rem !important; max-width: 1300px; }
 
 /* ── 제목 pill ── */
@@ -27,25 +27,26 @@ html, body, [class*="css"] { font-family: 'Noto Sans KR', sans-serif; }
     letter-spacing: 0.05em; box-shadow: 0 4px 20px rgba(124,92,191,0.35);
 }
 
-/* ── 카테고리 탭 바 (핑크 바) ── */
+/* ── 카테고리 탭 바 ── */
 .stButton > button[kind="secondary"] {
-    background: rgba(255,255,255,0.15) !important;
-    border: 2px solid rgba(255,255,255,0.4) !important;
-    color: white !important;
+    background: rgba(255,255,255,0.08) !important;
+    border: 2px solid rgba(255,255,255,0.2) !important;
+    color: #ccc !important;
 }
 
 /* ── 2×2 메서드 카드 ── */
 .method-card {
-    background: #b8c4e0; border-radius: 18px; min-height: 190px;
+    background: #1e1e32; border-radius: 18px; min-height: 190px;
     padding: 1.8rem 1.5rem 1.5rem; cursor: pointer;
     transition: transform 0.15s, box-shadow 0.15s;
     display: flex; flex-direction: column; justify-content: space-between;
     position: relative; overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
 }
-.method-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.15); }
-.method-card-title { font-size: 1.55rem; font-weight: 900; color: white; text-shadow: 0 2px 8px rgba(0,0,0,0.2); }
-.method-card-desc  { font-size: 0.82rem; color: rgba(255,255,255,0.88); margin-top:0.4rem; font-weight:600; }
-.method-card-emoji { position:absolute; bottom:1rem; right:1.2rem; font-size:3rem; opacity:0.3; }
+.method-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.4); }
+.method-card-title { font-size: 1.55rem; font-weight: 900; color: white; text-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+.method-card-desc  { font-size: 0.82rem; color: rgba(255,255,255,0.6); margin-top:0.4rem; font-weight:600; }
+.method-card-emoji { position:absolute; bottom:1rem; right:1.2rem; font-size:3rem; opacity:0.2; }
 
 /* ── 결과 카드 ── */
 .result-card {
@@ -68,40 +69,50 @@ html, body, [class*="css"] { font-family: 'Noto Sans KR', sans-serif; }
 }
 .spin-emoji { display:inline-block; font-size:5rem; animation:spin-slow 2s cubic-bezier(0.25,0.46,0.45,0.94) forwards; }
 
-/* ── 스크래치 카드 ── */
-.scratch-hidden {
-    background: repeating-linear-gradient(
-        45deg, #c8c8c8, #c8c8c8 10px, #b0b0b0 10px, #b0b0b0 20px
-    );
-    border-radius: 20px; padding: 3rem 2rem; text-align: center;
-    border: 3px dashed #999;
-}
-.scratch-label { font-size:1.1rem; font-weight:700; color:#555; margin-top:1rem; }
-.scratch-coins { font-size:3rem; }
-
 /* ── 월드컵 ── */
 .wc-option {
-    background:white; border:3px solid #ddd; border-radius:16px;
+    background:#1e1e32; border:3px solid #333; border-radius:16px;
     padding:1.8rem 1.2rem; text-align:center;
     transition:all 0.18s;
 }
-.wc-option:hover { border-color:#667eea; background:#f8f0ff; }
+.wc-option:hover { border-color:#667eea; background:#252540; }
 .wc-emoji { font-size:2.5rem; }
-.wc-name  { font-size:1.3rem; font-weight:800; margin:0.5rem 0; color:#1a1a2e; }
-.wc-cal   { font-size:0.85rem; color:#aaa; }
+.wc-name  { font-size:1.3rem; font-weight:800; margin:0.5rem 0; color:#f0f0ff; }
+.wc-cal   { font-size:0.85rem; color:#666; }
 
 /* ── 이력 아이템 ── */
 .hist-item {
-    background:white; border-radius:10px; padding:0.7rem 1rem; margin:0.3rem 0;
+    background:#1a1a2e; border-radius:10px; padding:0.7rem 1rem; margin:0.3rem 0;
     border-left:4px solid #667eea; display:flex; justify-content:space-between;
-    align-items:center; box-shadow:0 2px 6px rgba(0,0,0,0.05); font-size:0.88rem;
+    align-items:center; box-shadow:0 2px 6px rgba(0,0,0,0.3); font-size:0.88rem;
+    color:#ccc;
 }
 
 /* ── 맛집 카드 ── */
 .rest-card {
-    background:white; border-radius:14px; padding:1rem 1.3rem; margin:0.5rem 0;
-    box-shadow:0 4px 14px rgba(0,0,0,0.07); border-left:5px solid #f5576c;
+    background:#1a1a2e; border-radius:14px; padding:1rem 1.3rem; margin:0.5rem 0;
+    box-shadow:0 4px 14px rgba(0,0,0,0.3); border-left:5px solid #f5576c;
+    color:#ccc;
 }
+
+/* 다크 모드 텍스트 보정 */
+.stMarkdown, .stMarkdown p, label, .stMetric, .stSelectbox label,
+.stNumberInput label, .stTextInput label, .stCheckbox label,
+[data-testid="stMetricLabel"], [data-testid="stMetricValue"] {
+    color: #ccc !important;
+}
+[data-testid="stMetricValue"] { color: #fff !important; }
+.stTabs [data-baseweb="tab-panel"] { background: transparent; }
+[data-baseweb="tab-list"] { background: #1a1a2e !important; border-radius: 12px; }
+[data-baseweb="tab"] { color: #aaa !important; }
+[aria-selected="true"][data-baseweb="tab"] { color: #fff !important; }
+.stSelectbox > div > div, .stTextInput > div > div > input,
+.stNumberInput > div > div > input {
+    background: #1e1e32 !important; color: #eee !important;
+    border-color: #333 !important;
+}
+hr { border-color: #333 !important; }
+.stAlert { background: #1e1e32 !important; color: #ccc !important; }
 
 /* Streamlit 기본 요소 */
 #MainMenu, footer, header { visibility:hidden; }
@@ -112,6 +123,11 @@ html, body, [class*="css"] { font-family: 'Noto Sans KR', sans-serif; }
 .stTabs [data-baseweb="tab"] {
     border-radius:10px !important; font-weight:600 !important;
     font-family:'Noto Sans KR',sans-serif !important;
+}
+
+/* ── 스크래치 캔버스 래퍼 ── */
+.scratch-wrapper {
+    display: flex; flex-direction: column; align-items: center; gap: 1rem;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -449,15 +465,14 @@ st.markdown('<div class="title-pill-wrap"><div class="title-pill">🍽️ 오늘
             unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────
-# ② 카테고리 탭 바 (핑크 배경 + 14개 버튼)
+# ② 카테고리 탭 바
 # ─────────────────────────────────────────────────────────────
 st.markdown("""
-<div style="background:#d966a0;border-radius:14px;padding:0.55rem 0.8rem;margin-bottom:1rem;">
-<span style="color:rgba(255,255,255,0.7);font-size:0.78rem;font-weight:700;margin-right:0.5rem">카테고리</span>
+<div style="background:#1a1a2e;border-radius:14px;padding:0.55rem 0.8rem;margin-bottom:1rem;border:1px solid #333;">
+<span style="color:rgba(255,255,255,0.4);font-size:0.78rem;font-weight:700;margin-right:0.5rem">카테고리</span>
 </div>
 """, unsafe_allow_html=True)
 
-# 14개를 7+7 두 줄로
 row_a = st.columns(7)
 row_b = st.columns(7)
 all_cat_cols = row_a + row_b
@@ -481,27 +496,25 @@ st.markdown("<div style='height:0.3rem'></div>", unsafe_allow_html=True)
 menus = get_menus()
 method = st.session_state.active_method
 
-# 현재 카테고리 헤더
 cur_emoji = CATEGORY_EMOJI.get(st.session_state.active_cat, "🍽️")
 st.markdown(f"""
 <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;">
     <span style="font-size:1.6rem">{cur_emoji}</span>
-    <span style="font-size:1.25rem;font-weight:900;color:#1a1a2e">{st.session_state.active_cat}</span>
-    <span style="font-size:0.85rem;color:#aaa;margin-left:0.3rem">({len(menus)}개 메뉴)</span>
+    <span style="font-size:1.25rem;font-weight:900;color:#e0e0ff">{st.session_state.active_cat}</span>
+    <span style="font-size:0.85rem;color:#666;margin-left:0.3rem">({len(menus)}개 메뉴)</span>
 </div>
 """, unsafe_allow_html=True)
 
 if len(menus) < 2:
     st.warning("⚠️ 메뉴가 2개 이상 필요합니다. 메뉴 관리에서 추가하거나 다른 카테고리를 선택하세요.")
 elif method is None:
-    # ── 2×2 메서드 선택 그리드 ──
     row1 = st.columns(2, gap="medium")
     row2 = st.columns(2, gap="medium")
 
     METHODS = [
         ("random",   "랜덤",    "버튼 한 번에 즉시 추천",        "🎲", row1[0]),
         ("worldcup", "월드컵",  "1:1 대결로 최후의 1개 선택",    "🏆", row1[1]),
-        ("scratch",  "스크래치","긁어서 메뉴 확인",              "🃏", row2[0]),
+        ("scratch",  "스크래치","마우스로 긁어서 메뉴 확인",     "🃏", row2[0]),
         ("roulette", "룰렛",    "돌아가는 룰렛으로 결정",        "🎡", row2[1]),
     ]
     for key, label, desc, emoji, col in METHODS:
@@ -529,7 +542,6 @@ elif method is None:
                 st.rerun()
 
 else:
-    # 뒤로가기
     if st.button("← 돌아가기", key="back"):
         reset_method()
         st.rerun()
@@ -585,32 +597,156 @@ else:
     # ── 스크래치 ──────────────────────────────────────────────
     elif method == "scratch":
         st.markdown("### 🃏 스크래치 카드")
-        if not st.session_state.scratch_revealed:
-            st.markdown("""
-            <div class="scratch-hidden">
-                <div class="scratch-coins">🪙 🪙 🪙</div>
-                <div class="scratch-label">버튼을 눌러 메뉴를 확인하세요!</div>
-            </div>
-            """, unsafe_allow_html=True)
-            st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
-            if st.button("✨ 긁어서 확인!", type="primary", use_container_width=True):
-                if not st.session_state.scratch_menu:
-                    st.session_state.scratch_menu = random.choice(menus)
-                add_history(st.session_state.scratch_menu, "🃏 스크래치")
-                st.session_state.scratch_revealed = True
-                st.rerun()
+
+        m = st.session_state.scratch_menu
+        if m:
+            menu_name  = m["name"]
+            menu_emoji = m.get("emoji", "🍽️")
+            menu_cal   = m.get("cal", 0)
         else:
-            result_card(st.session_state.scratch_menu, "🃏 스크래치")
-            c1, c2 = st.columns(2)
-            with c1:
-                if st.button("🔄 다시 긁기", use_container_width=True):
-                    st.session_state.scratch_menu     = random.choice(menus)
-                    st.session_state.scratch_revealed = False
-                    st.rerun()
-            with c2:
-                if st.button("📍 맛집 찾기", use_container_width=True):
-                    st.session_state.active_method = "restaurant"
-                    st.rerun()
+            menu_name, menu_emoji, menu_cal = "???", "🍽️", 0
+
+        # ── 캔버스 스크래치 카드 (HTML + JS) ──
+        scratch_html = f"""
+<div style="display:flex;flex-direction:column;align-items:center;gap:1rem;">
+  <p style="color:#aaa;font-size:0.95rem;margin:0">마우스(또는 손가락)로 긁어서 메뉴를 확인하세요!</p>
+  <div style="position:relative;width:340px;height:200px;border-radius:20px;overflow:hidden;
+              box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+    <!-- 아래 레이어: 결과 -->
+    <div id="reveal-layer" style="position:absolute;inset:0;
+         background:linear-gradient(135deg,#667eea,#764ba2);
+         display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.4rem;">
+      <div style="font-size:3.5rem;line-height:1">{menu_emoji}</div>
+      <div style="font-size:1.8rem;font-weight:900;color:white">{menu_name}</div>
+      <div style="font-size:0.9rem;color:rgba(255,255,255,0.8);
+                  background:rgba(255,255,255,0.2);border-radius:999px;padding:0.2rem 1rem">
+        🔥 {menu_cal} kcal
+      </div>
+    </div>
+    <!-- 위 레이어: 긁는 캔버스 -->
+    <canvas id="scratch-canvas" width="340" height="200"
+            style="position:absolute;inset:0;cursor:crosshair;border-radius:20px;touch-action:none"></canvas>
+  </div>
+  <p id="hint-text" style="color:#666;font-size:0.82rem;margin:0">긁은 면적이 60%를 넘으면 자동 완성돼요</p>
+</div>
+
+<script>
+(function() {{
+  const canvas  = document.getElementById('scratch-canvas');
+  const ctx     = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // 긁힌 면적 트래킹용 오프스크린
+  const offscreen = document.createElement('canvas');
+  offscreen.width = W; offscreen.height = H;
+  const octx = offscreen.getContext('2d');
+
+  // 스크래치 레이어 그리기 (어두운 질감)
+  function drawScratchLayer(c) {{
+    const grad = c.createLinearGradient(0,0,W,H);
+    grad.addColorStop(0,'#2a2a4a');
+    grad.addColorStop(0.5,'#3a2a5a');
+    grad.addColorStop(1,'#1a1a3a');
+    c.fillStyle = grad;
+    c.fillRect(0,0,W,H);
+
+    // 반짝이 패턴
+    c.fillStyle='rgba(255,255,255,0.03)';
+    for(let i=0;i<60;i++){{
+      const x=Math.random()*W, y=Math.random()*H, r=Math.random()*3+1;
+      c.beginPath(); c.arc(x,y,r,0,Math.PI*2); c.fill();
+    }}
+    // 텍스트
+    c.fillStyle='rgba(255,255,255,0.55)';
+    c.font='bold 22px "Noto Sans KR",sans-serif';
+    c.textAlign='center';
+    c.fillText('🪙  긁어서 확인  🪙', W/2, H/2-10);
+    c.font='14px "Noto Sans KR",sans-serif';
+    c.fillStyle='rgba(255,255,255,0.35)';
+    c.fillText('Scratch here!', W/2, H/2+20);
+  }}
+
+  drawScratchLayer(ctx);
+  drawScratchLayer(octx);
+
+  ctx.globalCompositeOperation = 'destination-out';
+  octx.globalCompositeOperation = 'destination-out';
+
+  let painting = false;
+  let revealed = false;
+
+  function getPos(e) {{
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = W / rect.width, scaleY = H / rect.height;
+    if (e.touches) {{
+      return {{
+        x: (e.touches[0].clientX - rect.left) * scaleX,
+        y: (e.touches[0].clientY - rect.top)  * scaleY,
+      }};
+    }}
+    return {{
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top)  * scaleY,
+    }};
+  }}
+
+  function scratch(pos) {{
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, 28, 0, Math.PI*2);
+    ctx.fill();
+    octx.beginPath();
+    octx.arc(pos.x, pos.y, 28, 0, Math.PI*2);
+    octx.fill();
+    checkReveal();
+  }}
+
+  function checkReveal() {{
+    if (revealed) return;
+    const data = octx.getImageData(0,0,W,H).data;
+    let cleared = 0;
+    for (let i=3; i<data.length; i+=4) {{ if (data[i]===0) cleared++; }}
+    const pct = cleared / (W*H);
+    if (pct > 0.60) {{
+      revealed = true;
+      // 부드럽게 남은 캔버스 페이드아웃
+      let op = 1;
+      function fade() {{
+        op -= 0.06;
+        if (op <= 0) {{ canvas.style.display='none'; document.getElementById('hint-text').textContent='✨ 오늘의 메뉴!'; return; }}
+        canvas.style.opacity = op;
+        requestAnimationFrame(fade);
+      }}
+      fade();
+    }}
+  }}
+
+  canvas.addEventListener('mousedown',  e=>{{ painting=true; scratch(getPos(e)); }});
+  canvas.addEventListener('mousemove',  e=>{{ if(painting) scratch(getPos(e)); }});
+  canvas.addEventListener('mouseup',    ()=>{{ painting=false; }});
+  canvas.addEventListener('mouseleave', ()=>{{ painting=false; }});
+  canvas.addEventListener('touchstart', e=>{{ e.preventDefault(); painting=true; scratch(getPos(e)); }}, {{passive:false}});
+  canvas.addEventListener('touchmove',  e=>{{ e.preventDefault(); if(painting) scratch(getPos(e)); }}, {{passive:false}});
+  canvas.addEventListener('touchend',   ()=>{{ painting=false; }});
+}})();
+</script>
+"""
+        st.components.v1.html(scratch_html, height=300)
+
+        # 이력에 추가 (한 번만)
+        if not st.session_state.scratch_revealed and m:
+            add_history(m, "🃏 스크래치")
+            st.session_state.scratch_revealed = True
+
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("🔄 새 카드 뽑기", use_container_width=True, type="primary"):
+                st.session_state.scratch_menu     = random.choice(menus)
+                st.session_state.scratch_revealed = False
+                st.rerun()
+        with c2:
+            if st.button("📍 맛집 찾기", use_container_width=True):
+                st.session_state.active_method = "restaurant"
+                st.rerun()
 
     # ── 월드컵 ────────────────────────────────────────────────
     elif method == "worldcup":
@@ -639,7 +775,6 @@ else:
             idx     = ts["pair_idx"]
 
             if idx >= len(pairs):
-                # 라운드 완료 → 다음 라운드
                 next_round = ts["winners"][:]
                 if len(next_round) % 2 == 1 and len(next_round) > 1:
                     next_round = next_round[:-1]
@@ -667,7 +802,7 @@ else:
                         ts["pair_idx"] += 1
                         st.rerun()
                 with col_vs:
-                    st.markdown('<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:130px;font-size:1.4rem;font-weight:900;color:#ccc">VS</div>',
+                    st.markdown('<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:130px;font-size:1.4rem;font-weight:900;color:#444">VS</div>',
                                 unsafe_allow_html=True)
                 with col_b:
                     st.markdown(f"""
@@ -701,20 +836,20 @@ else:
                         stars = "⭐" * int(r["rating"])
                         st.markdown(f"""
                         <div class="rest-card">
-                            <div style="font-size:1rem;font-weight:700">🍴 {r['name']}</div>
+                            <div style="font-size:1rem;font-weight:700;color:#eee">🍴 {r['name']}</div>
                             <div style="color:#888;font-size:0.85rem;margin-top:0.3rem">
                                 {stars} {r['rating']} · 리뷰 {r['reviews']}개 · 📍 {r['address']}
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
-                    st.caption("⚠️ 샘플 데이터입니다. Step 3에서 Kakao/Google Places API로 교체 예정.")
+                    st.caption("⚠️ 샘플 데이터입니다.")
                 else:
                     st.warning("해당 지역 데이터가 없습니다.")
 
 # ─────────────────────────────────────────────────────────────
 # ④ 하단 탭: 이력 + 메뉴 관리
 # ─────────────────────────────────────────────────────────────
-st.markdown("<hr style='border:none;border-top:2px solid #e0e0e0;margin:1.5rem 0 1rem'>",
+st.markdown("<hr style='border:none;border-top:2px solid #222;margin:1.5rem 0 1rem'>",
             unsafe_allow_html=True)
 
 tab_hist, tab_mgmt = st.tabs(["📋 추천 이력", "🔧 메뉴 관리"])
@@ -731,8 +866,8 @@ with tab_hist:
         for h in st.session_state.history:
             st.markdown(f"""
             <div class="hist-item">
-                <div>{h['emoji']} <b>{h['menu']}</b>
-                    <span style="color:#aaa;font-size:0.82rem"> &nbsp;·&nbsp; {h['time']} &nbsp;·&nbsp; {h['method']} &nbsp;·&nbsp; {h['cat']}</span>
+                <div>{h['emoji']} <b style="color:#eee">{h['menu']}</b>
+                    <span style="color:#555;font-size:0.82rem"> &nbsp;·&nbsp; {h['time']} &nbsp;·&nbsp; {h['method']} &nbsp;·&nbsp; {h['cat']}</span>
                 </div>
                 <div style="color:#667eea;font-weight:700">{h['cal']} kcal</div>
             </div>
