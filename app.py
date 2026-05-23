@@ -561,28 +561,214 @@ else:
     # ── 룰렛 ──────────────────────────────────────────────────
     elif method == "roulette":
         st.markdown("### 🎡 룰렛")
-        if st.button("🎡 룰렛 돌리기!", type="primary", use_container_width=True):
-            picked = random.choice(menus)
-            add_history(picked, "🎡 룰렛")
-            st.session_state._roulette_result = picked
-            st.session_state._roulette_spin   = True
+
+        import json as _json
+        menu_list_json = _json.dumps([
+            {"name": m["name"], "emoji": m.get("emoji", "🍽️"), "cal": m.get("cal", 0)}
+            for m in menus
+        ], ensure_ascii=False)
+
+        roulette_html = f"""
+<style>
+  #roulette-wrap {{
+    display: flex; flex-direction: column; align-items: center; gap: 1.2rem;
+    font-family: 'Noto Sans KR', sans-serif; padding: 0.5rem 0 1rem;
+  }}
+  #wheel-container {{
+    position: relative; width: 360px; height: 360px;
+  }}
+  #wheel-canvas {{
+    border-radius: 50%;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    display: block;
+  }}
+  #pointer {{
+    position: absolute;
+    top: -16px; left: 50%;
+    transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 13px solid transparent;
+    border-right: 13px solid transparent;
+    border-top: 32px solid #e53935;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    z-index: 10;
+  }}
+  #spin-btn {{
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white; border: none; border-radius: 999px;
+    padding: 0.75rem 3rem; font-size: 1.05rem; font-weight: 700;
+    cursor: pointer; box-shadow: 0 4px 18px rgba(102,126,234,0.4);
+    transition: transform 0.1s;
+    font-family: 'Noto Sans KR', sans-serif;
+  }}
+  #spin-btn:hover {{ transform: translateY(-2px); }}
+  #spin-btn:disabled {{ opacity: 0.5; cursor: not-allowed; transform: none; }}
+  #result-box {{
+    display: none;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20px; padding: 1.6rem 3rem; text-align: center;
+    color: white; box-shadow: 0 10px 40px rgba(102,126,234,0.4);
+    animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    min-width: 280px;
+  }}
+  @keyframes popIn {{
+    from {{ transform: scale(0.7); opacity: 0; }}
+    to   {{ transform: scale(1);   opacity: 1; }}
+  }}
+  #result-emoji {{ font-size: 3rem; line-height: 1; margin-bottom: 0.35rem; }}
+  #result-name  {{ font-size: 1.9rem; font-weight: 900; margin-bottom: 0.35rem; }}
+  #result-cal   {{
+    display: inline-block; background: rgba(255,255,255,0.25);
+    border-radius: 999px; padding: 0.2rem 1rem; font-size: 0.88rem; font-weight: 600;
+  }}
+</style>
+
+<div id="roulette-wrap">
+  <div id="wheel-container">
+    <div id="pointer"></div>
+    <canvas id="wheel-canvas" width="360" height="360"></canvas>
+  </div>
+  <button id="spin-btn" onclick="spinWheel()">🎡 룰렛 돌리기!</button>
+  <div id="result-box">
+    <div id="result-emoji"></div>
+    <div id="result-name"></div>
+    <div id="result-cal"></div>
+  </div>
+</div>
+
+<script>
+(function() {{
+  const MENUS  = {menu_list_json};
+  const canvas = document.getElementById('wheel-canvas');
+  const ctx    = canvas.getContext('2d');
+  const W = canvas.width, CX = W/2, CY = W/2, R = W/2 - 4;
+  const N   = MENUS.length;
+  const arc = (2 * Math.PI) / N;
+  const COLORS = [
+    '#667eea','#f5576c','#4facfe','#43e97b','#fa709a','#fee140',
+    '#a18cd1','#fda085','#84fab0','#f6d365','#89f7fe','#fccb90',
+    '#d4fc79','#96fbc4','#f093fb',
+  ];
+
+  let currentAngle = -Math.PI / 2;  // 12시 방향에서 시작
+  let spinning = false;
+
+  function drawWheel(angle) {{
+    ctx.clearRect(0, 0, W, W);
+
+    for (let i = 0; i < N; i++) {{
+      const start = angle + i * arc;
+      const end   = start + arc;
+
+      // 섹터 채우기
+      ctx.beginPath();
+      ctx.moveTo(CX, CY);
+      ctx.arc(CX, CY, R, start, end);
+      ctx.closePath();
+      ctx.fillStyle = COLORS[i % COLORS.length];
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // 텍스트 그리기
+      ctx.save();
+      ctx.translate(CX, CY);
+      ctx.rotate(start + arc / 2);
+
+      const isSmall = N > 10;
+      const emojiSize = isSmall ? 13 : 17;
+      const nameSize  = isSmall ? 10 : 12;
+      const maxLen    = isSmall ? 5  : 6;
+      const textR     = R - 12;
+
+      // 이모지
+      ctx.font = emojiSize + 'px serif';
+      ctx.textAlign = 'right';
+      ctx.fillStyle = 'white';
+      ctx.fillText(MENUS[i].emoji, textR - (isSmall ? 48 : 40), 5);
+
+      // 메뉴 이름
+      ctx.font = 'bold ' + nameSize + 'px "Noto Sans KR",sans-serif';
+      let name = MENUS[i].name;
+      if (name.length > maxLen) name = name.slice(0, maxLen - 1) + '…';
+      ctx.fillText(name, textR, 5);
+
+      ctx.restore();
+    }}
+
+    // 중앙 원 (흰 버튼)
+    ctx.beginPath();
+    ctx.arc(CX, CY, 24, 0, 2 * Math.PI);
+    ctx.fillStyle = 'white';
+    ctx.fill();
+    ctx.strokeStyle = '#ccc';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#888';
+    ctx.fillText('GO', CX, CY + 5);
+  }}
+
+  drawWheel(currentAngle);
+
+  window.spinWheel = function() {{
+    if (spinning) return;
+    spinning = true;
+    document.getElementById('spin-btn').disabled = true;
+    document.getElementById('result-box').style.display = 'none';
+
+    // 5~8바퀴 + 랜덤 추가각
+    const rounds     = 5 + Math.random() * 3;
+    const extraAngle = Math.random() * 2 * Math.PI;
+    const totalAngle = rounds * 2 * Math.PI + extraAngle;
+    const duration   = 4200;
+    const startAngle = currentAngle;
+    const startTime  = performance.now();
+
+    function easeOut(t) {{ return 1 - Math.pow(1 - t, 4); }}
+
+    function animate(now) {{
+      const elapsed = now - startTime;
+      const t = Math.min(elapsed / duration, 1);
+      currentAngle = startAngle + totalAngle * easeOut(t);
+      drawWheel(currentAngle);
+
+      if (t < 1) {{
+        requestAnimationFrame(animate);
+      }} else {{
+        // 포인터(12시 = -π/2 절대각)에 해당하는 섹터 계산
+        // 섹터 i의 시작각: currentAngle + i*arc
+        // 포인터가 가리키는 각도: -π/2 (절대)
+        // normalise pointer relative to wheel
+        const ptr = ((-Math.PI/2 - currentAngle) % (2*Math.PI) + 2*Math.PI) % (2*Math.PI);
+        const idx  = Math.floor(ptr / arc) % N;
+        const winner = MENUS[idx];
+
+        const box = document.getElementById('result-box');
+        document.getElementById('result-emoji').textContent = winner.emoji;
+        document.getElementById('result-name').textContent  = winner.name;
+        document.getElementById('result-cal').textContent   = '🔥 약 ' + winner.cal + ' kcal · 🎡 룰렛';
+        box.style.display = 'block';
+
+        spinning = false;
+        document.getElementById('spin-btn').disabled = false;
+        document.getElementById('spin-btn').textContent = '🔄 다시 돌리기!';
+      }}
+    }}
+
+    requestAnimationFrame(animate);
+  }};
+}})();
+</script>
+"""
+        st.components.v1.html(roulette_html, height=680, scrolling=False)
+
+        if st.button("📍 맛집 찾기", use_container_width=True):
+            st.session_state.active_method = "restaurant"
             st.rerun()
-        if st.session_state._roulette_spin and st.session_state._roulette_result:
-            r = st.session_state._roulette_result
-            st.markdown(f'<div style="text-align:center;margin:1rem 0"><span class="spin-emoji">{r["emoji"]}</span></div>',
-                        unsafe_allow_html=True)
-            result_card(r, "🎡 룰렛")
-            c1, c2 = st.columns(2)
-            with c1:
-                if st.button("🔄 다시 돌리기", use_container_width=True):
-                    picked = random.choice(menus)
-                    add_history(picked, "🎡 룰렛")
-                    st.session_state._roulette_result = picked
-                    st.rerun()
-            with c2:
-                if st.button("📍 맛집 찾기", use_container_width=True):
-                    st.session_state.active_method = "restaurant"
-                    st.rerun()
 
     # ── 스크래치 ──────────────────────────────────────────────
     elif method == "scratch":
