@@ -398,6 +398,10 @@ def reset_method():
     st.session_state.tarot_cards = None
     st.session_state.tarot_chosen = None
     st.session_state.pending_adopt = None
+    
+    # 수동 주사위 상태 초기화 (추가)
+    if "dice_winner" in st.session_state:
+        st.session_state.dice_winner = None
 
 def get_fortune():
     today = date.today().isoformat()
@@ -535,6 +539,7 @@ else:
         st.markdown("### 🎡 룰렛")
         menu_list_json = _json.dumps(
             [{"name":m["name"],"emoji":m.get("emoji","🍽️"),"cal":m.get("cal",0)} for m in menus], ensure_ascii=False)
+        
         roulette_html = f"""
 <style>
   #roulette-wrap{{display:flex;flex-direction:column;align-items:center;gap:1.2rem;font-family:'Noto Sans KR',sans-serif;padding:.5rem 0 1rem;}}
@@ -601,12 +606,16 @@ else:
         document.getElementById('result-box').style.display='block';
         spinning=false;document.getElementById('spin-btn').disabled=false;
         
-        // 브릿지 통신
-        setTimeout(function() {{
-            const pUrl = new URL(window.parent.location.href);
-            pUrl.searchParams.set('js_menu_result', winner.name);
-            window.parent.location.href = pUrl.href;
-        }}, 600);
+        // 브릿지 통신 시도 (오류 대비)
+        try {
+            setTimeout(function() {
+                const pUrl = new URL(window.parent.location.href);
+                pUrl.searchParams.set('js_menu_result', winner.name);
+                window.parent.location.href = pUrl.href;
+            }, 600);
+        } catch(e) {
+            console.log("Parent update blocked by iframe sandbox.");
+        }
       }}
     }}
     requestAnimationFrame(animate);
@@ -615,11 +624,26 @@ else:
 </script>"""
         st.components.v1.html(roulette_html, height=720, scrolling=False)
 
-        # 뽑힌 결과물이 브릿지를 통해 세션으로 들어왔을 때 채택 버튼 노출
+        # 뽑힌 결과물이 세션에 정상 연동되면 다이렉트 채택 버튼 노출
         if st.session_state.pending_adopt:
             st.markdown("---")
             result_card(st.session_state.pending_adopt, "🎡 룰렛 추천")
             adopt_button(st.session_state.pending_adopt, "🎡 룰렛", key_suffix="roulette_live")
+        else:
+            # 배포 환경에서 JS->Python 데이터 전달이 차단될 경우를 대비한 수동 백업 
+            st.markdown("<div style='background:#f8f0ff;border-radius:14px;padding:1rem 1.2rem;margin-top:.5rem;border:2px dashed #b39ddb;text-align:center;color:#555;font-size:.9rem'>결과가 자동으로 나오지 않는다면(보안 차단) 아래에서 룰렛 결과를 직접 선택해주세요 👇</div>", unsafe_allow_html=True)
+            all_names = [m["name"] for m in menus]
+            col_sel, col_btn = st.columns([3, 2])
+            with col_sel:
+                sel = st.selectbox("룰렛 결과 메뉴 선택", all_names, key="roulette_adopt_sel", label_visibility="collapsed")
+            with col_btn:
+                if st.button("✅ 이 메뉴로 결정!", key="roulette_adopt_btn", use_container_width=True, type="primary"):
+                    matched = next((m for m in menus if m["name"] == sel), None)
+                    if matched:
+                        add_history(matched, "🎡 룰렛")
+                        st.success(f"🎉 **{matched['name']}** 이(가) 오늘의 메뉴로 기록됐어요!")
+                        reset_method()
+                        st.rerun()
 
     # ── 스크래치 ─────────────────────────────────────────────
     elif method == "scratch":
@@ -715,74 +739,52 @@ else:
                     if st.button(f"✅ {b['name']}", key=f"wb_{idx}", use_container_width=True, type="primary"):
                         ts["winners"].append(b); ts["pair_idx"] += 1; st.rerun()
 
-    # ── 주사위 ───────────────────────────────────────────────
+    # ── 주사위 (전면 개선: 파이썬 Native CSS 기반) ───────────────
     elif method == "dice":
         st.markdown("### 🎲 주사위")
-        dice_menu_json = _json.dumps(
-            [{"name":m["name"],"emoji":m.get("emoji","🍽️"),"cal":m.get("cal",0)} for m in menus], ensure_ascii=False)
-        dice_html = f"""
-<style>
-  *{{box-sizing:border-box;}}body{{margin:0;}}
-  #dice-wrap{{display:flex;flex-direction:column;align-items:center;gap:1.4rem;font-family:'Noto Sans KR',sans-serif;padding:1.2rem 1rem 1.4rem;}}
-  .dice{{width:110px;height:110px;background:white;border-radius:18px;box-shadow:0 8px 28px rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;font-size:68px;}}
-  @keyframes shake{{0%{{transform:translate(0,0) rotate(0deg)}}15%{{transform:translate(-6px,2px) rotate(-12deg)}}30%{{transform:translate(6px,-2px) rotate(12deg)}}45%{{transform:translate(-4px,4px) rotate(-8deg)}}60%{{transform:translate(4px,-4px) rotate(8deg)}}75%{{transform:translate(-2px,2px) rotate(-4deg)}}90%{{transform:translate(2px,-2px) rotate(4deg)}}100%{{transform:translate(0,0) rotate(0deg)}}}}
-  .shaking{{animation:shake .7s ease-in-out;}}
-  #roll-btn{{background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:999px;padding:.75rem 3rem;font-size:1.05rem;font-weight:700;cursor:pointer;box-shadow:0 4px 18px rgba(102,126,234,.4);font-family:'Noto Sans KR',sans-serif;transition:transform .1s;}}
-  #roll-btn:hover{{transform:translateY(-2px);}} #roll-btn:disabled{{opacity:.5;cursor:not-allowed;transform:none;}}
-  #result-box{{display:none;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border-radius:20px;padding:1.6rem 2.5rem;text-align:center;color:white;box-shadow:0 10px 40px rgba(102,126,234,.4);min-width:280px;animation:popIn .4s cubic-bezier(.34,1.56,.64,1);}}
-  @keyframes popIn{{from{{transform:scale(.7);opacity:0}}to{{transform:scale(1);opacity:1}}}}
-  #res-emoji{{font-size:3rem;line-height:1;margin-bottom:.35rem;}} #res-name{{font-size:1.9rem;font-weight:900;margin-bottom:.35rem;}}
-  #res-cal{{display:inline-block;background:rgba(255,255,255,.25);border-radius:999px;padding:.2rem 1rem;font-size:.88rem;font-weight:600;}}
-  #dice-label{{font-size:.88rem;color:#888;}}
-</style>
-<div id="dice-wrap">
-  <div class="dice" id="dice-face">⚀</div>
-  <button id="roll-btn" onclick="rollDice()">🎲 주사위 굴리기!</button>
-  <div id="result-box"><div id="res-emoji"></div><div id="res-name"></div><div id="res-cal"></div></div>
-  <div id="dice-label"></div>
-</div>
-<script>
-(function(){{
-  const MENUS={dice_menu_json};
-  const FACES=['⚀','⚁','⚂','⚃','⚄','⚅'];
-  let rolling=false;
-  window.rollDice=function(){{
-    if(rolling)return;rolling=true;
-    const btn=document.getElementById('roll-btn'),el=document.getElementById('dice-face');
-    btn.disabled=true;document.getElementById('result-box').style.display='none';
-    el.classList.remove('shaking');void el.offsetWidth;el.classList.add('shaking');
-    let count=0;
-    const iv=setInterval(()=>{{
-      el.textContent=FACES[Math.floor(Math.random()*6)];count++;
-      if(count>15){{
-        clearInterval(iv);
-        const val=Math.floor(Math.random()*6)+1;el.textContent=FACES[val-1];
-        const idx=(val*3-1)%MENUS.length,winner=MENUS[idx];
-        document.getElementById('res-emoji').textContent=winner.emoji;
-        document.getElementById('res-name').textContent=winner.name;
-        document.getElementById('res-cal').textContent='🔥 약 '+winner.cal+' kcal · 🎲 주사위('+val+')';
-        document.getElementById('result-box').style.display='block';
-        document.getElementById('dice-label').textContent='주사위 '+val+' → '+(idx+1)+'번 메뉴';
-        btn.disabled=false;btn.textContent='🔄 다시 굴리기!';rolling=false;
-
-        // 브릿지 통신
-        setTimeout(function() {{
-            const pUrl = new URL(window.parent.location.href);
-            pUrl.searchParams.set('js_menu_result', winner.name);
-            window.parent.location.href = pUrl.href;
-        }}, 600);
-      }}
-    }},70);
-  }};
-}})();
-</script>"""
-        st.components.v1.html(dice_html, height=440, scrolling=False)
-
-        # 뽑힌 결과물이 브릿지를 통해 세션으로 들어왔을 때 채택 버튼 노출
-        if st.session_state.pending_adopt:
+        
+        # Streamlit Native Button 통제로 iframe 에러 원천 차단
+        if st.button("🎲 주사위 굴리기!", type="primary", use_container_width=True):
+            st.session_state.dice_winner = random.choice(menus)
+            st.session_state.dice_face = random.randint(1, 6)
+        
+        winner = st.session_state.get("dice_winner")
+        
+        if winner:
+            face = st.session_state.dice_face
+            faces = ['⚀','⚁','⚂','⚃','⚄','⚅']
+            
+            st.markdown(f"""
+            <div style="display:flex;flex-direction:column;align-items:center;padding:1.5rem 0;">
+                <div style="font-size:7.5rem; line-height:1; color:#1a1a2e; animation: diceRoll 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);">{faces[face-1]}</div>
+                <div style="font-size:1.1rem; font-weight:800; color:#667eea; margin-top:0.8rem; animation: fadeIn 1s;">주사위 {face} → 당첨!</div>
+            </div>
+            <style>
+            @keyframes diceRoll {{
+                0% {{ transform: rotate(0deg) scale(0.5); opacity: 0; }}
+                25% {{ transform: rotate(-30deg) scale(1.1); }}
+                50% {{ transform: rotate(30deg) scale(1.2); }}
+                75% {{ transform: rotate(-15deg) scale(1.1); }}
+                100% {{ transform: rotate(0deg) scale(1); opacity: 1; }}
+            }}
+            @keyframes fadeIn {{
+                0% {{ opacity: 0; }}
+                50% {{ opacity: 0; }}
+                100% {{ opacity: 1; }}
+            }}
+            </style>
+            """, unsafe_allow_html=True)
+            
             st.markdown("---")
-            result_card(st.session_state.pending_adopt, "🎲 주사위 추천")
-            adopt_button(st.session_state.pending_adopt, "🎲 주사위", key_suffix="dice_live")
+            result_card(winner, f"🎲 주사위 추천 (숫자 {face})")
+            adopt_button(winner, "🎲 주사위", key_suffix="dice_live")
+        else:
+            st.markdown("""
+            <div style="display:flex;flex-direction:column;align-items:center;padding:2.5rem 0;opacity:0.35;">
+                <div style="font-size:7.5rem; line-height:1; color:#555;">⚀</div>
+                <div style="font-size:0.95rem; font-weight:600; margin-top:0.8rem;">위 버튼을 눌러 주사위를 굴려보세요!</div>
+            </div>
+            """, unsafe_allow_html=True)
 
     # ── 카드 뽑기 ────────────────────────────────────────────
     elif method == "tarot":
