@@ -425,7 +425,7 @@ else:
         roulette_html = f"""
 <style>
   #roulette-wrap {{ display:flex;flex-direction:column;align-items:center;gap:1.2rem;font-family:'Noto Sans KR',sans-serif;padding:0.5rem 0 1rem; }}
-  #wheel-container {{ position:relative;width:360px;height:360px; }}
+  #wheel-container {{ position:relative;width:520px;height:520px; }}
   #wheel-canvas {{ border-radius:50%;box-shadow:0 8px 32px rgba(0,0,0,0.2);display:block; }}
   #pointer {{ position:absolute;top:-16px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:13px solid transparent;border-right:13px solid transparent;border-top:32px solid #e53935;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));z-index:10; }}
   #spin-btn {{ background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:999px;padding:0.75rem 3rem;font-size:1.05rem;font-weight:700;cursor:pointer;box-shadow:0 4px 18px rgba(102,126,234,0.4);transition:transform 0.1s;font-family:'Noto Sans KR',sans-serif; }}
@@ -437,7 +437,7 @@ else:
   #result-cal   {{ display:inline-block;background:rgba(255,255,255,0.25);border-radius:999px;padding:0.2rem 1rem;font-size:0.88rem;font-weight:600; }}
 </style>
 <div id="roulette-wrap">
-  <div id="wheel-container"><div id="pointer"></div><canvas id="wheel-canvas" width="360" height="360"></canvas></div>
+  <div id="wheel-container"><div id="pointer"></div><canvas id="wheel-canvas" width="520" height="520"></canvas></div>
   <button id="spin-btn" onclick="spinWheel()">🎡 룰렛 돌리기!</button>
   <div id="result-box"><div id="result-emoji"></div><div id="result-name"></div><div id="result-cal"></div></div>
 </div>
@@ -456,9 +456,9 @@ else:
       ctx.fillStyle=COLORS[i%COLORS.length];ctx.fill();
       ctx.strokeStyle='rgba(255,255,255,0.7)';ctx.lineWidth=1.5;ctx.stroke();
       ctx.save();ctx.translate(CX,CY);ctx.rotate(start+arc/2);
-      const isSmall=N>10,emojiSize=isSmall?13:17,nameSize=isSmall?10:12,maxLen=isSmall?5:6,textR=R-12;
+      const isSmall=N>10,emojiSize=isSmall?16:20,nameSize=isSmall?13:15,maxLen=isSmall?6:7,textR=R-14;
       ctx.font=emojiSize+'px serif';ctx.textAlign='right';ctx.fillStyle='white';
-      ctx.fillText(MENUS[i].emoji,textR-(isSmall?48:40),5);
+      ctx.fillText(MENUS[i].emoji,textR-(isSmall?62:52),5);
       ctx.font='bold '+nameSize+'px "Noto Sans KR",sans-serif';
       let name=MENUS[i].name;if(name.length>maxLen)name=name.slice(0,maxLen-1)+'…';
       ctx.fillText(name,textR,5);ctx.restore();
@@ -496,7 +496,7 @@ else:
   }};
 }})();
 </script>"""
-        st.components.v1.html(roulette_html, height=680, scrolling=False)
+        st.components.v1.html(roulette_html, height=840, scrolling=False)
 
     # ══════════════════════════════════════════════════════
     # 스크래치
