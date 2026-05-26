@@ -237,11 +237,9 @@ def init():
         "last_result":      None,
         "_random_result":   None,
         "cal_cache":        {},
-        # 대결 모드
         "battle_a":         "",
         "battle_b":         "",
         "battle_result":    None,
-        # 칼로리 트래커
         "today_log":        [],
     }
     for k, v in defaults.items():
@@ -299,7 +297,6 @@ def add_history(menu, method):
     if len(st.session_state.history) > 50:
         st.session_state.history = st.session_state.history[:50]
     st.session_state.last_result = entry
-    # 칼로리 트래커 오늘 로그에도 추가
     today = date.today().isoformat()
     st.session_state.today_log.append({"menu":menu["name"],"emoji":menu.get("emoji","🍽️"),"cal":kcal,"date":today,"time":datetime.now().strftime("%H:%M")})
 
@@ -359,7 +356,6 @@ st.markdown(f"""<div style="display:flex;align-items:center;gap:0.6rem;margin-bo
 if len(menus) < 2:
     st.warning("⚠️ 메뉴가 2개 이상 필요합니다.")
 elif method is None:
-    # ── 3×3 메서드 그리드 ──
     METHODS = [
         ("random",   "랜덤",        "버튼 한 번에 즉시 추천",           "🎲"),
         ("roulette", "룰렛",        "모든 메뉴가 담긴 룰렛 바퀴",       "🎡"),
@@ -504,9 +500,9 @@ else:
     elif method == "scratch":
         st.markdown("### 🃏 스크래치 카드")
         m = st.session_state.scratch_menu
-        menu_name  = m["name"]   if m else "???"
+        menu_name  = m["name"]        if m else "???"
         menu_emoji = m.get("emoji","🍽️") if m else "🍽️"
-        menu_cal   = m.get("cal",0)       if m else 0
+        menu_cal   = m.get("cal", 0)  if m else 0
         scratch_html = f"""
 <div style="display:flex;flex-direction:column;align-items:center;gap:1rem;">
   <p style="color:#555;font-size:0.95rem;margin:0">마우스(또는 손가락)로 긁어서 메뉴를 확인하세요!</p>
@@ -596,8 +592,8 @@ else:
                     if st.button(f"✅ {b['name']}", key=f"wb_{idx}", use_container_width=True, type="primary"):
                         ts["winners"].append(b); ts["pair_idx"] += 1; st.rerun()
 
-   # ══════════════════════════════════════════════════════
-    # 주사위
+    # ══════════════════════════════════════════════════════
+    # 주사위 ← 수정된 부분
     # ══════════════════════════════════════════════════════
     elif method == "dice":
         st.markdown("### 🎲 주사위")
@@ -608,24 +604,25 @@ else:
         dice_html = f"""
 <style>
   #dice-wrap {{
-    display:flex; flex-direction:column; align-items:center; gap:1.5rem;
-    font-family:'Noto Sans KR',sans-serif; padding:1rem;
+    display:flex; flex-direction:column; align-items:center; gap:1.2rem;
+    font-family:'Noto Sans KR',sans-serif; padding:1rem 1rem 2rem;
   }}
-  .dice {{
-    width:110px; height:110px; background:white; border-radius:18px;
-    box-shadow:0 8px 32px rgba(0,0,0,0.2);
+  .dice-face {{
+    width:120px; height:120px; background:white; border-radius:20px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.18);
     display:flex; align-items:center; justify-content:center;
-    font-size:64px; transition:transform 0.1s;
+    font-size:52px; font-weight:900; color:#1a1a2e;
+    letter-spacing:-2px;
   }}
   @keyframes shake {{
-    0%{{transform:rotate(0deg) scale(1)}}
-    20%{{transform:rotate(-18deg) scale(1.1)}}
-    40%{{transform:rotate(18deg) scale(1.05)}}
-    60%{{transform:rotate(-12deg) scale(1.08)}}
-    80%{{transform:rotate(12deg) scale(1.03)}}
-    100%{{transform:rotate(0deg) scale(1)}}
+    0%  {{ transform:rotate(0deg)   scale(1);   }}
+    20% {{ transform:rotate(-18deg) scale(1.12); }}
+    40% {{ transform:rotate(18deg)  scale(1.06); }}
+    60% {{ transform:rotate(-12deg) scale(1.09); }}
+    80% {{ transform:rotate(12deg)  scale(1.04); }}
+    100%{{ transform:rotate(0deg)   scale(1);   }}
   }}
-  .shaking {{ animation:shake 0.5s ease-in-out; }}
+  .shaking {{ animation:shake 0.55s ease-in-out; }}
   #roll-btn {{
     background:linear-gradient(135deg,#667eea,#764ba2); color:white;
     border:none; border-radius:999px; padding:0.75rem 3rem;
@@ -634,103 +631,115 @@ else:
     box-shadow:0 4px 18px rgba(102,126,234,0.4);
     transition:transform 0.1s, opacity 0.2s;
   }}
-  #roll-btn:hover {{ transform:translateY(-2px); }}
-  #roll-btn:disabled {{ opacity:0.5; cursor:not-allowed; transform:none; }}
+  #roll-btn:hover   {{ transform:translateY(-2px); }}
+  #roll-btn:disabled{{ opacity:0.5; cursor:not-allowed; transform:none; }}
   #dice-number {{
-    font-size:1.1rem; font-weight:700; color:#667eea;
-    min-height:1.5rem; text-align:center;
+    font-size:1.05rem; font-weight:700; color:#667eea;
+    min-height:1.4rem; text-align:center;
   }}
   #result-box {{
     display:none;
     background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
-    border-radius:20px; padding:1.8rem 2.5rem; text-align:center;
+    border-radius:20px; padding:1.8rem 2.8rem; text-align:center;
     color:white; box-shadow:0 10px 40px rgba(102,126,234,0.4);
+    min-width:270px;
     animation:popIn 0.45s cubic-bezier(0.34,1.56,0.64,1);
-    min-width:260px;
   }}
   @keyframes popIn {{
     from {{ transform:scale(0.6); opacity:0; }}
     to   {{ transform:scale(1);   opacity:1; }}
   }}
-  #result-emoji {{ font-size:3.2rem; line-height:1; margin-bottom:0.4rem; }}
-  #result-name  {{ font-size:1.9rem; font-weight:900; margin-bottom:0.4rem; }}
+  #result-emoji {{ font-size:3.2rem; line-height:1; margin-bottom:0.45rem; }}
+  #result-name  {{ font-size:1.85rem; font-weight:900; margin-bottom:0.45rem; }}
   #result-cal   {{
     display:inline-block; background:rgba(255,255,255,0.25);
     border-radius:999px; padding:0.25rem 1.1rem;
-    font-size:0.9rem; font-weight:600;
+    font-size:0.88rem; font-weight:600;
   }}
-  #result-dice-label {{
-    margin-top:0.6rem; font-size:0.82rem;
-    color:rgba(255,255,255,0.65);
+  #result-sub {{
+    margin-top:0.55rem; font-size:0.8rem;
+    color:rgba(255,255,255,0.6);
   }}
 </style>
+
 <div id="dice-wrap">
-  <div class="dice" id="dice-face">⚀</div>
+  <div class="dice-face" id="dice-face">🎲</div>
   <div id="dice-number"></div>
   <button id="roll-btn" onclick="rollDice()">🎲 주사위 굴리기!</button>
   <div id="result-box">
     <div id="result-emoji"></div>
     <div id="result-name"></div>
     <div id="result-cal"></div>
-    <div id="result-dice-label"></div>
+    <div id="result-sub"></div>
   </div>
 </div>
+
 <script>
 (function(){{
   const MENUS = {menu_list_json};
-  const FACES = ['⚀','⚁','⚂','⚃','⚄','⚅'];
+  // 주사위 눈을 깔끔한 텍스트(숫자)로 표현 — 이모지 깨짐 방지
+  const FACES = ['1','2','3','4','5','6'];
+  const DOTS  = [
+    '⠀●⠀<br>⠀⠀⠀<br>⠀⠀⠀',  // 편의상 textContent 로 처리
+  ];
   let spinning = false;
 
   window.rollDice = function() {{
     if (spinning) return;
     spinning = true;
-    document.getElementById('result-box').style.display = 'none';
-    document.getElementById('dice-number').textContent = '';
-    const el = document.getElementById('roll-btn');
-    el.disabled = true;
 
-    const diceFace = document.getElementById('dice-face');
-    diceFace.classList.remove('shaking');
-    void diceFace.offsetWidth;
-    diceFace.classList.add('shaking');
+    const box    = document.getElementById('result-box');
+    const numLbl = document.getElementById('dice-number');
+    const face   = document.getElementById('dice-face');
+    const btn    = document.getElementById('roll-btn');
 
-    // 최종 주사위 값 미리 결정
+    box.style.display   = 'none';
+    numLbl.textContent  = '';
+    btn.disabled        = true;
+
+    // 흔들기 애니메이션 재시작
+    face.classList.remove('shaking');
+    void face.offsetWidth;
+    face.classList.add('shaking');
+
+    // 결과 미리 결정
     const finalVal = Math.floor(Math.random() * 6) + 1;
     const finalIdx = (finalVal * 3 - 1) % MENUS.length;
     const winner   = MENUS[finalIdx];
 
     let count = 0;
     const iv = setInterval(() => {{
-      diceFace.textContent = FACES[Math.floor(Math.random() * 6)];
+      face.textContent = FACES[Math.floor(Math.random() * 6)];
       count++;
-      if (count > 14) {{
+      if (count > 16) {{
         clearInterval(iv);
-        // 최종 눈 확정
-        diceFace.textContent = FACES[finalVal - 1];
 
-        // 숫자 라벨
-        document.getElementById('dice-number').textContent =
-          '🎲 ' + finalVal + '이(가) 나왔어요!';
+        // ① 주사위 최종 눈 확정
+        face.textContent = finalVal;
 
-        // 결과 카드 표시
+        // ② 눈 라벨
+        numLbl.textContent = '🎲 ' + finalVal + '이(가) 나왔어요!';
+
+        // ③ 결과 카드 채우기
         document.getElementById('result-emoji').textContent = winner.emoji;
         document.getElementById('result-name').textContent  = winner.name;
         document.getElementById('result-cal').textContent   = '🔥 약 ' + winner.cal + ' kcal';
-        document.getElementById('result-dice-label').textContent =
-          '주사위 ' + finalVal + '번 · ' + (finalIdx + 1) + '번 메뉴';
+        document.getElementById('result-sub').textContent   =
+          '주사위 ' + finalVal + '  ·  ' + (finalIdx + 1) + '번 메뉴';
 
-        const box = document.getElementById('result-box');
+        // ④ 카드 표시
         box.style.display = 'block';
 
-        el.disabled = false;
-        el.textContent = '🔄 다시 굴리기!';
-        spinning = false;
+        btn.disabled     = false;
+        btn.textContent  = '🔄 다시 굴리기!';
+        spinning         = false;
       }}
-    }}, 80);
+    }}, 75);
   }};
 }})();
 </script>"""
-        st.components.v1.html(dice_html, height=460, scrolling=False)
+        # height=640 으로 결과 카드가 잘리지 않도록 여유 확보
+        st.components.v1.html(dice_html, height=640, scrolling=False)
 
     # ══════════════════════════════════════════════════════
     # 카드 뽑기 (타로)
@@ -741,8 +750,8 @@ else:
             st.session_state.tarot_cards  = random.sample(menus, min(3, len(menus)))
             st.session_state.tarot_chosen = None
 
-        cards   = st.session_state.tarot_cards
-        chosen  = st.session_state.tarot_chosen
+        cards  = st.session_state.tarot_cards
+        chosen = st.session_state.tarot_chosen
 
         if chosen is None:
             st.markdown("<p style='color:#555;text-align:center;font-size:1rem'>✨ 세 장의 카드 중 하나를 고르세요</p>", unsafe_allow_html=True)
@@ -757,7 +766,7 @@ else:
                         st.session_state.tarot_chosen = card
                         add_history(card, "🃏 카드뽑기"); st.rerun()
         else:
-            st.markdown(f"""<div style="text-align:center;margin:1rem 0;">
+            st.markdown("""<div style="text-align:center;margin:1rem 0;">
                 <div style="font-size:1rem;color:#888;margin-bottom:0.5rem">✨ 운명의 선택!</div>
             </div>""", unsafe_allow_html=True)
             result_card(chosen, "🃏 카드뽑기")
@@ -775,9 +784,8 @@ else:
                 st.session_state.tarot_cards  = random.sample(menus, min(3, len(menus)))
                 st.session_state.tarot_chosen = None; st.rerun()
 
-
     # ══════════════════════════════════════════════════════
-    # 스마트 추천 (최근 안 먹은 메뉴)
+    # 스마트 추천
     # ══════════════════════════════════════════════════════
     elif method == "smart":
         st.markdown("### 🧠 스마트 추천")
@@ -831,7 +839,7 @@ else:
                 st.rerun()
 
         if st.session_state.battle_result:
-            br = st.session_state.battle_result
+            br     = st.session_state.battle_result
             winner = br["winner"]
             loser  = br["b"] if winner == br["a"] else br["a"]
             st.balloons()
@@ -877,7 +885,7 @@ with tab_tracker:
     goal_cal  = 2000
 
     st.markdown(f"### 오늘({today}) 칼로리")
-    pct = min(total_cal / goal_cal, 1.0)
+    pct   = min(total_cal / goal_cal, 1.0)
     color = "#43e97b" if pct < 0.7 else "#fee140" if pct < 0.9 else "#f5576c"
     st.markdown(f"""<div style="margin-bottom:0.5rem">
         <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem">
@@ -905,7 +913,6 @@ with tab_tracker:
     else:
         st.info("오늘 아직 추천받은 메뉴가 없어요!")
 
-    # 주간 차트
     if st.session_state.today_log:
         st.markdown("**최근 7일 칼로리**")
         from collections import defaultdict
@@ -933,7 +940,7 @@ with tab_rank:
         cnt = Counter(h["menu"] for h in st.session_state.history)
         top = cnt.most_common(10)
         max_cnt = top[0][1] if top else 1
-        medals = ["🥇","🥈","🥉"] + ["🏅"]*7
+        medals  = ["🥇","🥈","🥉"] + ["🏅"]*7
         for rank, (name, count) in enumerate(top):
             emoji = next((h["emoji"] for h in st.session_state.history if h["menu"]==name), "🍽️")
             bar_w = count / max_cnt * 100
@@ -949,7 +956,6 @@ with tab_rank:
                 <div style="color:#667eea;font-weight:700;white-space:nowrap">{count}회</div>
             </div>""", unsafe_allow_html=True)
 
-        # 방식별 통계
         st.markdown("### 📊 방식별 사용 통계")
         method_cnt = Counter(h["method"] for h in st.session_state.history)
         max_m = max(method_cnt.values())
