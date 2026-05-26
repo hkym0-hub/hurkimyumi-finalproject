@@ -750,29 +750,248 @@ document.getElementById('retry-btn').onclick = function() {{
     # ── 주사위 ──────────────────────────────────────────────
     elif method == "dice":
         st.markdown("### 🎲 주사위")
-        if not st.session_state.get('dice_winner'):
-            st.markdown("""<div style="display:flex;flex-direction:column;align-items:center;padding:2.5rem 0;opacity:0.35;">
-                <div style="font-size:7.5rem; line-height:1; color:#555;">⚀</div>
-                <div style="font-size:0.95rem; font-weight:600; margin-top:0.8rem;">아래 버튼을 눌러 주사위를 굴려보세요!</div>
-            </div>""", unsafe_allow_html=True)
-            if st.button("🎲 주사위 굴리기!", type="primary", use_container_width=True):
-                st.session_state.dice_winner = random.choice(menus)
-                st.session_state.dice_face = random.randint(1, 6)
-                st.rerun()
-        else:
+
+        import json as _json
+        dice_face = st.session_state.get("dice_face", 1)
+        dice_done = st.session_state.dice_winner is not None
+        winner_name = st.session_state.dice_winner["name"] if dice_done else ""
+        winner_emoji = st.session_state.dice_winner.get("emoji","🍽️") if dice_done else ""
+        winner_cal = st.session_state.dice_winner.get("cal",0) if dice_done else 0
+
+        dice_html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * {{ margin:0; padding:0; box-sizing:border-box; }}
+  body {{ background:transparent; font-family:'Noto Sans KR',sans-serif;
+    display:flex; flex-direction:column; align-items:center; padding:24px 10px; gap:0; }}
+  #scene {{ width:180px; height:180px; perspective:600px; margin-bottom:20px; }}
+  #cube {{ width:100%; height:100%; position:relative; transform-style:preserve-3d;
+    transform: rotateX(0deg) rotateY(0deg);
+    transition: none; }}
+  .face {{ position:absolute; width:180px; height:180px; border-radius:22px;
+    background:white; border:none;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:inset 0 0 0 4px rgba(0,0,0,0.08), 0 4px 24px rgba(0,0,0,0.12);
+    font-size:3.2rem; }}
+  .face.front  {{ transform: translateZ(90px); }}
+  .face.back   {{ transform: rotateY(180deg) translateZ(90px); }}
+  .face.right  {{ transform: rotateY(90deg)  translateZ(90px); }}
+  .face.left   {{ transform: rotateY(-90deg) translateZ(90px); }}
+  .face.top    {{ transform: rotateX(90deg)  translateZ(90px); }}
+  .face.bottom {{ transform: rotateX(-90deg) translateZ(90px); }}
+  /* dot grid */
+  .dots {{ display:grid; width:100%; height:100%; padding:20px; }}
+  .dot {{ width:22px; height:22px; border-radius:50%; background:#1a1a2e; }}
+  /* face 1 */
+  .f1 {{ grid-template-columns:1fr; grid-template-rows:1fr; place-items:center; }}
+  /* face 2 */
+  .f2 {{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; }}
+  .f2 .d1 {{ grid-column:1; grid-row:1; align-self:start; justify-self:start; }}
+  .f2 .d2 {{ grid-column:2; grid-row:2; align-self:end;   justify-self:end;   }}
+  /* face 3 */
+  .f3 {{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr 1fr; }}
+  .f3 .d1 {{ grid-column:1; grid-row:1; align-self:start; justify-self:start; }}
+  .f3 .d2 {{ grid-column:2; grid-row:2; align-self:center; justify-self:end; }}
+  .f3 .d3 {{ grid-column:1; grid-row:3; align-self:end; justify-self:start; }}
+  /* face 4 */
+  .f4 {{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:8px; place-items:center; }}
+  /* face 5 */
+  .f5 {{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr 1fr; gap:4px; place-items:center; }}
+  .f5 .d5 {{ grid-column:1/3; grid-row:2; }}
+  /* face 6 */
+  .f6 {{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr 1fr; gap:4px; place-items:center; }}
+
+  #roll-btn {{ padding:14px 56px; font-size:1.1rem; font-weight:800;
+    background:linear-gradient(135deg,#667eea,#764ba2); color:white; border:none;
+    border-radius:999px; cursor:pointer; box-shadow:0 6px 24px rgba(102,126,234,0.45);
+    font-family:'Noto Sans KR',sans-serif; transition:transform .15s, box-shadow .15s; }}
+  #roll-btn:hover {{ transform:translateY(-2px); box-shadow:0 10px 32px rgba(102,126,234,0.55); }}
+  #roll-btn:disabled {{ opacity:0.5; cursor:not-allowed; transform:none; }}
+  #face-label {{ font-size:1rem; font-weight:700; color:#667eea; margin-top:14px;
+    opacity:0; transition:opacity .4s; min-height:1.4em; }}
+  #result-box {{ margin-top:18px; padding:18px 36px; background:linear-gradient(135deg,#667eea,#764ba2);
+    border-radius:18px; color:white; text-align:center; display:none;
+    animation:fadeUp .5s ease; }}
+  #result-box .r-emoji {{ font-size:2.2rem; }}
+  #result-box .r-name  {{ font-size:1.4rem; font-weight:900; margin-top:6px; }}
+  #result-box .r-cal   {{ font-size:.85rem; opacity:.8; margin-top:4px; }}
+  @keyframes fadeUp {{ from {{ opacity:0; transform:translateY(14px); }} to {{ opacity:1; transform:translateY(0); }} }}
+</style>
+</head>
+<body>
+<div id="scene">
+  <div id="cube">
+    <!-- face: front=1, back=6, right=2, left=5, top=3, bottom=4 -->
+    <div class="face front">
+      <div class="dots f1"><div class="dot"></div></div>
+    </div>
+    <div class="face back">
+      <div class="dots f6">
+        <div class="dot"></div><div class="dot"></div>
+        <div class="dot"></div><div class="dot"></div>
+        <div class="dot"></div><div class="dot"></div>
+      </div>
+    </div>
+    <div class="face right">
+      <div class="dots f2">
+        <div class="dot d1"></div><div class="dot" style="grid-column:2;grid-row:1;align-self:start;justify-self:end;"></div>
+        <div class="dot" style="grid-column:1;grid-row:2;align-self:end;justify-self:start;"></div><div class="dot d2"></div>
+      </div>
+    </div>
+    <div class="face left">
+      <div class="dots f5">
+        <div class="dot"></div><div class="dot"></div>
+        <div class="dot d5"></div>
+        <div class="dot"></div><div class="dot"></div>
+      </div>
+    </div>
+    <div class="face top">
+      <div class="dots f3">
+        <div class="dot d1"></div><div style="grid-column:2;grid-row:1;"></div>
+        <div style="grid-column:1;grid-row:2;"></div><div class="dot d2"></div>
+        <div class="dot d3"></div><div style="grid-column:2;grid-row:3;"></div>
+      </div>
+    </div>
+    <div class="face bottom">
+      <div class="dots f4">
+        <div class="dot"></div><div class="dot"></div>
+        <div class="dot"></div><div class="dot"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button id="roll-btn">🎲 주사위 굴리기!</button>
+<div id="face-label"></div>
+<div id="result-box">
+  <div class="r-emoji" id="r-emoji">{winner_emoji}</div>
+  <div class="r-name"  id="r-name">{winner_name}</div>
+  <div class="r-cal"   id="r-cal">🔥 {winner_cal} kcal</div>
+</div>
+
+<script>
+const FINAL_FACE = {dice_face};
+const ALREADY_DONE = {"true" if dice_done else "false"};
+
+// Target rotations so each face number is front-facing
+// front=1 → rotX=0 rotY=0
+// back=6  → rotX=0 rotY=180
+// right=2 → rotX=0 rotY=-90
+// left=5  → rotX=0 rotY=90
+// top=3   → rotX=90 rotY=0   (wait, need to test)
+// bottom=4→ rotX=-90 rotY=0
+const FACE_ROTS = {{
+  1: [0, 0],
+  2: [0, -90],
+  3: [-90, 0],
+  4: [90, 0],
+  5: [0, 90],
+  6: [0, 180],
+}};
+
+const cube = document.getElementById('cube');
+const btn  = document.getElementById('roll-btn');
+const label = document.getElementById('face-label');
+const resultBox = document.getElementById('result-box');
+
+let currentX = 0, currentY = 0;
+
+function setRotation(x, y, animate) {{
+  if (animate) {{
+    cube.style.transition = 'transform 0.08s linear';
+  }} else {{
+    cube.style.transition = 'none';
+  }}
+  cube.style.transform = `rotateX(${{x}}deg) rotateY(${{y}}deg)`;
+  currentX = x; currentY = y;
+}}
+
+function showResult() {{
+  label.style.opacity = '1';
+  label.textContent = `주사위 ${{FINAL_FACE}} 🎲 당첨!`;
+  resultBox.style.display = 'block';
+  btn.textContent = '🔄 다시 굴리기';
+  btn.disabled = false;
+  btn.onclick = function() {{
+    window.parent.postMessage({{type:'streamlit:setComponentValue', value:'reroll'}}, '*');
+  }};
+}}
+
+function rollAnimation() {{
+  btn.disabled = true;
+  label.style.opacity = '0';
+  resultBox.style.display = 'none';
+
+  const totalFrames = 40;
+  let frame = 0;
+
+  // Generate random tumbling sequence
+  const sequence = [];
+  for (let i = 0; i < totalFrames; i++) {{
+    const speedFactor = i < 20 ? 1 : (i < 32 ? 0.6 : 0.25);
+    sequence.push({{
+      x: currentX + (Math.random() - 0.5) * 180 * speedFactor,
+      y: currentY + (Math.random() - 0.5) * 180 * speedFactor,
+    }});
+  }}
+
+  // Last few frames ease into the final face
+  const [finalX, finalY] = FACE_ROTS[FINAL_FACE];
+  // Add extra full spins + final position
+  const spinX = Math.round(currentX / 360) * 360 + finalX + 720;
+  const spinY = Math.round(currentY / 360) * 360 + finalY + 1080;
+
+  function step() {{
+    if (frame < sequence.length) {{
+      setRotation(sequence[frame].x, sequence[frame].y, false);
+      frame++;
+      // Slow down over time
+      const delay = frame < 20 ? 30 : frame < 32 ? 55 : 90;
+      setTimeout(step, delay);
+    }} else {{
+      // Smooth settle to final
+      cube.style.transition = 'transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+      cube.style.transform = `rotateX(${{spinX}}deg) rotateY(${{spinY}}deg)`;
+      currentX = spinX; currentY = spinY;
+      setTimeout(showResult, 700);
+      // Notify streamlit
+      window.parent.postMessage({{type:'streamlit:setComponentValue', value:'rolled:' + FINAL_FACE}}, '*');
+    }}
+  }}
+  step();
+}}
+
+if (ALREADY_DONE) {{
+  const [fx, fy] = FACE_ROTS[FINAL_FACE];
+  setRotation(fx, fy, false);
+  showResult();
+}} else {{
+  btn.onclick = rollAnimation;
+}}
+</script>
+</body>
+</html>
+"""
+        components.html(dice_html, height=480, scrolling=False)
+
+        if dice_done:
             winner = st.session_state.dice_winner
             face = st.session_state.dice_face
-            faces = ['⚀','⚁','⚂','⚃','⚄','⚅']
-            st.markdown(f"""<div style="display:flex;flex-direction:column;align-items:center;padding:1.5rem 0;">
-                <div style="font-size:7.5rem; line-height:1; color:#1a1a2e;">{faces[face-1]}</div>
-                <div style="font-size:1.1rem; font-weight:800; color:#667eea; margin-top:0.8rem;">주사위 {face} → 당첨!</div>
-            </div>""", unsafe_allow_html=True)
-            st.markdown("---")
             result_card(winner, f"🎲 주사위 추천 (숫자 {face})")
             adopt_button(winner, "🎲 주사위", key_suffix="dice_live")
             if st.button("🔄 다시 굴리기", use_container_width=True):
                 st.session_state.dice_winner = None
                 st.rerun()
+        else:
+            col1, col2, col3 = st.columns([1,2,1])
+            with col2:
+                if st.button("🎲 주사위 굴리기!", key="dice_py_btn", type="primary", use_container_width=True):
+                    st.session_state.dice_winner = random.choice(menus)
+                    st.session_state.dice_face = random.randint(1, 6)
+                    st.rerun()
 
     # ── 카드 뽑기 ────────────────────────────────────────────
     elif method == "tarot":
