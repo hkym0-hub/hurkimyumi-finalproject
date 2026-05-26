@@ -596,53 +596,141 @@ else:
                     if st.button(f"✅ {b['name']}", key=f"wb_{idx}", use_container_width=True, type="primary"):
                         ts["winners"].append(b); ts["pair_idx"] += 1; st.rerun()
 
-    # ══════════════════════════════════════════════════════
+   # ══════════════════════════════════════════════════════
     # 주사위
     # ══════════════════════════════════════════════════════
     elif method == "dice":
         st.markdown("### 🎲 주사위")
-        dice_html = """
+        menu_list_json = _json.dumps(
+            [{"name": m["name"], "emoji": m.get("emoji", "🍽️"), "cal": m.get("cal", 0)} for m in menus],
+            ensure_ascii=False
+        )
+        dice_html = f"""
 <style>
-  #dice-wrap { display:flex;flex-direction:column;align-items:center;gap:1.5rem;font-family:'Noto Sans KR',sans-serif;padding:1rem; }
-  .dice { width:100px;height:100px;background:white;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;font-size:60px;transition:transform 0.1s; }
-  @keyframes shake { 0%{transform:rotate(0deg)} 20%{transform:rotate(-15deg)} 40%{transform:rotate(15deg)} 60%{transform:rotate(-10deg)} 80%{transform:rotate(10deg)} 100%{transform:rotate(0deg)} }
-  .shaking { animation:shake 0.5s ease-in-out; }
-  #roll-btn { background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:999px;padding:0.75rem 3rem;font-size:1.05rem;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif; }
-  #dice-result { display:none;font-size:1.1rem;font-weight:700;color:#1a1a2e;text-align:center; }
+  #dice-wrap {{
+    display:flex; flex-direction:column; align-items:center; gap:1.5rem;
+    font-family:'Noto Sans KR',sans-serif; padding:1rem;
+  }}
+  .dice {{
+    width:110px; height:110px; background:white; border-radius:18px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.2);
+    display:flex; align-items:center; justify-content:center;
+    font-size:64px; transition:transform 0.1s;
+  }}
+  @keyframes shake {{
+    0%{{transform:rotate(0deg) scale(1)}}
+    20%{{transform:rotate(-18deg) scale(1.1)}}
+    40%{{transform:rotate(18deg) scale(1.05)}}
+    60%{{transform:rotate(-12deg) scale(1.08)}}
+    80%{{transform:rotate(12deg) scale(1.03)}}
+    100%{{transform:rotate(0deg) scale(1)}}
+  }}
+  .shaking {{ animation:shake 0.5s ease-in-out; }}
+  #roll-btn {{
+    background:linear-gradient(135deg,#667eea,#764ba2); color:white;
+    border:none; border-radius:999px; padding:0.75rem 3rem;
+    font-size:1.05rem; font-weight:700; cursor:pointer;
+    font-family:'Noto Sans KR',sans-serif;
+    box-shadow:0 4px 18px rgba(102,126,234,0.4);
+    transition:transform 0.1s, opacity 0.2s;
+  }}
+  #roll-btn:hover {{ transform:translateY(-2px); }}
+  #roll-btn:disabled {{ opacity:0.5; cursor:not-allowed; transform:none; }}
+  #dice-number {{
+    font-size:1.1rem; font-weight:700; color:#667eea;
+    min-height:1.5rem; text-align:center;
+  }}
+  #result-box {{
+    display:none;
+    background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+    border-radius:20px; padding:1.8rem 2.5rem; text-align:center;
+    color:white; box-shadow:0 10px 40px rgba(102,126,234,0.4);
+    animation:popIn 0.45s cubic-bezier(0.34,1.56,0.64,1);
+    min-width:260px;
+  }}
+  @keyframes popIn {{
+    from {{ transform:scale(0.6); opacity:0; }}
+    to   {{ transform:scale(1);   opacity:1; }}
+  }}
+  #result-emoji {{ font-size:3.2rem; line-height:1; margin-bottom:0.4rem; }}
+  #result-name  {{ font-size:1.9rem; font-weight:900; margin-bottom:0.4rem; }}
+  #result-cal   {{
+    display:inline-block; background:rgba(255,255,255,0.25);
+    border-radius:999px; padding:0.25rem 1.1rem;
+    font-size:0.9rem; font-weight:600;
+  }}
+  #result-dice-label {{
+    margin-top:0.6rem; font-size:0.82rem;
+    color:rgba(255,255,255,0.65);
+  }}
 </style>
 <div id="dice-wrap">
   <div class="dice" id="dice-face">⚀</div>
+  <div id="dice-number"></div>
   <button id="roll-btn" onclick="rollDice()">🎲 주사위 굴리기!</button>
-  <div id="dice-result"></div>
+  <div id="result-box">
+    <div id="result-emoji"></div>
+    <div id="result-name"></div>
+    <div id="result-cal"></div>
+    <div id="result-dice-label"></div>
+  </div>
 </div>
 <script>
-const FACES = ['⚀','⚁','⚂','⚃','⚄','⚅'];
-function rollDice() {
-  const el = document.getElementById('dice-face');
-  el.classList.remove('shaking'); void el.offsetWidth; el.classList.add('shaking');
-  let count = 0;
-  const iv = setInterval(() => {
-    el.textContent = FACES[Math.floor(Math.random()*6)]; count++;
-    if (count > 12) { clearInterval(iv);
-      const val = Math.floor(Math.random()*6)+1;
-      el.textContent = FACES[val-1];
-      document.getElementById('dice-result').style.display='block';
-      document.getElementById('dice-result').textContent = '🎲 ' + val + '가 나왔어요! 아래에서 결과를 확인하세요.';
-      window.parent.postMessage({type:'dice_result', value: val}, '*');
-    }
-  }, 80);
-}
+(function(){{
+  const MENUS = {menu_list_json};
+  const FACES = ['⚀','⚁','⚂','⚃','⚄','⚅'];
+  let spinning = false;
+
+  window.rollDice = function() {{
+    if (spinning) return;
+    spinning = true;
+    document.getElementById('result-box').style.display = 'none';
+    document.getElementById('dice-number').textContent = '';
+    const el = document.getElementById('roll-btn');
+    el.disabled = true;
+
+    const diceFace = document.getElementById('dice-face');
+    diceFace.classList.remove('shaking');
+    void diceFace.offsetWidth;
+    diceFace.classList.add('shaking');
+
+    // 최종 주사위 값 미리 결정
+    const finalVal = Math.floor(Math.random() * 6) + 1;
+    const finalIdx = (finalVal * 3 - 1) % MENUS.length;
+    const winner   = MENUS[finalIdx];
+
+    let count = 0;
+    const iv = setInterval(() => {{
+      diceFace.textContent = FACES[Math.floor(Math.random() * 6)];
+      count++;
+      if (count > 14) {{
+        clearInterval(iv);
+        // 최종 눈 확정
+        diceFace.textContent = FACES[finalVal - 1];
+
+        // 숫자 라벨
+        document.getElementById('dice-number').textContent =
+          '🎲 ' + finalVal + '이(가) 나왔어요!';
+
+        // 결과 카드 표시
+        document.getElementById('result-emoji').textContent = winner.emoji;
+        document.getElementById('result-name').textContent  = winner.name;
+        document.getElementById('result-cal').textContent   = '🔥 약 ' + winner.cal + ' kcal';
+        document.getElementById('result-dice-label').textContent =
+          '주사위 ' + finalVal + '번 · ' + (finalIdx + 1) + '번 메뉴';
+
+        const box = document.getElementById('result-box');
+        box.style.display = 'block';
+
+        el.disabled = false;
+        el.textContent = '🔄 다시 굴리기!';
+        spinning = false;
+      }}
+    }}, 80);
+  }};
+}})();
 </script>"""
-        st.components.v1.html(dice_html, height=280)
-        st.info("💡 주사위 눈 수 = 메뉴 목록에서 그 번째의 배수 위치로 선택돼요")
-        if st.button("🎲 주사위 결과 반영하기", type="primary", use_container_width=True):
-            val = random.randint(1, 6)
-            idx = (val * 3 - 1) % len(menus)
-            picked = menus[idx]
-            add_history(picked, f"🎲 주사위({val})")
-            st.session_state._random_result = picked; st.rerun()
-        if st.session_state._random_result:
-            result_card(st.session_state._random_result, "🎲 주사위")
+        st.components.v1.html(dice_html, height=460, scrolling=False)
 
     # ══════════════════════════════════════════════════════
     # 카드 뽑기 (타로)
