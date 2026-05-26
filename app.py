@@ -5,7 +5,7 @@ import json as _json
 from datetime import datetime, date
 
 st.set_page_config(
-    page_title="오늘 뭐 먹지?",
+    page_title="오늘의 추천 메뉴",
     page_icon="🍽️",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -324,7 +324,7 @@ def reset_method():
 # ─────────────────────────────────────────────────────────────
 # ① 제목
 # ─────────────────────────────────────────────────────────────
-st.markdown('<div class="title-pill-wrap"><div class="title-pill">🍽️ 오늘 뭐 먹지?</div></div>', unsafe_allow_html=True)
+st.markdown('<div class="title-pill-wrap"><div class="title-pill">🍽️ 오늘의 추천 메뉴</div></div>', unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────
 # ② 카테고리 탭 바
@@ -367,13 +367,12 @@ elif method is None:
         ("worldcup", "월드컵",      "1:1 대결로 최후의 1개",            "🏆"),
         ("dice",     "주사위",      "주사위 굴려서 결정",               "🎲"),
         ("tarot",    "카드 뽑기",   "타로카드 스타일 3장 중 선택",      "🃏"),
-        ("ai",       "AI 추천",     "기분·날씨·인원 맞춤 추천",         "🤖"),
         ("smart",    "스마트 추천", "최근 안 먹은 메뉴 위주 추천",      "🧠"),
         ("battle",   "대결 모드",   "두 사람 의견 충돌, 룰렛으로 결정", "⚔️"),
     ]
-    rows = [st.columns(3, gap="medium") for _ in range(3)]
+    rows = [st.columns(4, gap="medium") for _ in range(2)]
     for idx, (key, label, desc, emoji) in enumerate(METHODS):
-        col = rows[idx // 3][idx % 3]
+        col = rows[idx // 4][idx % 4]
         with col:
             st.markdown(f"""<div class="method-card">
                 <div><div class="method-card-title">{label}</div>
@@ -688,131 +687,6 @@ function rollDice() {
                 st.session_state.tarot_cards  = random.sample(menus, min(3, len(menus)))
                 st.session_state.tarot_chosen = None; st.rerun()
 
-    # ══════════════════════════════════════════════════════
-    # AI 추천
-    # ══════════════════════════════════════════════════════
-    elif method == "ai":
-        st.markdown("### 🤖 AI 맞춤 추천")
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            mood = st.selectbox("지금 기분 🙂", ["상쾌함","피곤함","신남","우울함","배고파 죽겠음","건강챙기고싶음"])
-        with c2:
-            weather = st.selectbox("날씨 🌤", ["맑음","흐림","비/눈","더움","추움"])
-        with c3:
-            people = st.selectbox("함께 먹는 인원 👥", ["혼자","2명","3~4명","5명 이상"])
-        spicy = st.checkbox("🌶️ 매운 음식 선호")
-        diet  = st.checkbox("🥗 다이어트 중")
-
-        # API 키 확인
-        anthropic_key = st.secrets.get("ANTHROPIC_API_KEY", "")
-        if not anthropic_key:
-            st.warning("""⚠️ Anthropic API 키가 설정되지 않았어요.
-Streamlit Cloud → App settings → Secrets 에 아래를 추가하세요:
-```
-ANTHROPIC_API_KEY = "sk-ant-..."
-```
-키 없이도 조건 기반 스마트 추천으로 대신 동작합니다.""")
-
-        if st.button("🤖 AI 추천 받기", type="primary", use_container_width=True):
-            menu_names = ", ".join([m["name"] for m in menus])
-            prompt = f"""다음 조건에 맞는 메뉴를 추천해주세요.
-조건:
-- 기분: {mood}
-- 날씨: {weather}
-- 인원: {people}
-- 매운 음식 선호: {"예" if spicy else "아니오"}
-- 다이어트 중: {"예" if diet else "아니오"}
-
-선택 가능한 메뉴 목록: {menu_names}
-
-위 메뉴 목록 중에서 딱 1개만 골라서 아래 형식으로만 답해주세요 (다른 말 금지):
-추천메뉴: [메뉴이름]
-이유: [2-3문장]
-
-반드시 메뉴 목록에 있는 메뉴만 추천하세요."""
-
-            with st.spinner("AI가 고민 중...🤔"):
-                ai_success = False
-
-                # ── API 키가 있을 때만 실제 AI 호출 ──
-                if anthropic_key:
-                    try:
-                        resp = requests.post(
-                            "https://api.anthropic.com/v1/messages",
-                            headers={
-                                "Content-Type": "application/json",
-                                "x-api-key": anthropic_key,
-                                "anthropic-version": "2023-06-01",
-                            },
-                            json={
-                                "model": "claude-sonnet-4-20250514",
-                                "max_tokens": 300,
-                                "messages": [{"role": "user", "content": prompt}],
-                            },
-                            timeout=15,
-                        )
-                        rj = resp.json()
-                        if resp.status_code != 200:
-                            st.warning(f"API 오류 {resp.status_code}: {rj.get('error', {}).get('message', '알 수 없는 오류')}")
-                        else:
-                            text = rj["content"][0]["text"]
-                            rec_name, reason = "", ""
-                            for line in text.strip().split("\n"):
-                                if line.startswith("추천메뉴:"):
-                                    rec_name = line.replace("추천메뉴:", "").strip().strip("[]")
-                                if line.startswith("이유:"):
-                                    reason = line.replace("이유:", "").strip()
-                            matched = next((m for m in menus if m["name"] == rec_name), None)
-                            # 완전 일치 안 되면 부분 일치 시도
-                            if not matched:
-                                matched = next((m for m in menus if m["name"] in rec_name or rec_name in m["name"]), None)
-                            if matched:
-                                add_history(matched, "🤖 AI 추천")
-                                result_card(matched, "🤖 AI 추천")
-                                if reason:
-                                    st.markdown(f"""<div style="background:#f8f0ff;border-radius:12px;padding:1rem 1.2rem;margin-top:0.5rem;border-left:4px solid #9b7fe8;">
-                                        <p style="color:#555;margin:0;font-size:0.95rem">💬 {reason}</p>
-                                    </div>""", unsafe_allow_html=True)
-                                ai_success = True
-                            else:
-                                st.info(f"AI 응답을 파싱하지 못했어요 (응답: {text[:100]}). 조건 기반으로 대신 추천할게요.")
-                    except Exception as e:
-                        st.info(f"AI 연결 실패 ({e}). 조건 기반으로 대신 추천할게요.")
-
-                # ── API 키 없거나 AI 실패 시: 조건 기반 필터링 추천 ──
-                if not ai_success:
-                    candidates = list(menus)
-                    if diet:
-                        candidates = [m for m in candidates if m.get("cal", 999) <= 400] or candidates
-                    if spicy:
-                        spicy_keywords = ["매운", "불닭", "마라", "쭈꾸미", "낙지", "엽기", "청양"]
-                        spicy_matches  = [m for m in candidates if any(k in m["name"] for k in spicy_keywords)]
-                        candidates = spicy_matches or candidates
-                    if people in ["혼자"]:
-                        small_cal = [m for m in candidates if m.get("cal", 999) <= 600]
-                        candidates = small_cal or candidates
-                    if mood in ["피곤함", "우울함"]:
-                        comfort = [m for m in candidates if m.get("cal", 0) >= 500]
-                        candidates = comfort or candidates
-                    if weather in ["추움"]:
-                        warm_keywords = ["찌개", "탕", "국밥", "전골", "라면"]
-                        warm = [m for m in candidates if any(k in m["name"] for k in warm_keywords)]
-                        candidates = warm or candidates
-                    if weather in ["더움"]:
-                        cool_keywords = ["냉면", "샐러드", "포케", "초밥"]
-                        cool = [m for m in candidates if any(k in m["name"] for k in cool_keywords)]
-                        candidates = cool or candidates
-
-                    picked = random.choice(candidates)
-                    add_history(picked, "🤖 AI 추천(조건기반)")
-                    result_card(picked, "🤖 AI 추천(조건기반)")
-
-                    conditions = f"기분:{mood} / 날씨:{weather} / 인원:{people}"
-                    if spicy: conditions += " / 매운 것 선호"
-                    if diet:  conditions += " / 다이어트 중"
-                    st.markdown(f"""<div style="background:#f8f0ff;border-radius:12px;padding:1rem 1.2rem;margin-top:0.5rem;border-left:4px solid #9b7fe8;">
-                        <p style="color:#555;margin:0;font-size:0.95rem">🧠 조건 기반 추천: {conditions}</p>
-                    </div>""", unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════
     # 스마트 추천 (최근 안 먹은 메뉴)
