@@ -8,7 +8,7 @@ st.set_page_config(page_title="오늘의 추천 메뉴", page_icon="🍽️", la
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght=400;600;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;900&display=swap');
 html,body,[class*="css"]{font-family:'Noto Sans KR',sans-serif;}
 .stApp{background:#f0f2f8;}
 .block-container{padding:1.5rem 2rem 2rem!important;max-width:1300px;}
@@ -24,6 +24,7 @@ html,body,[class*="css"]{font-family:'Noto Sans KR',sans-serif;}
 .result-emoji{font-size:4rem;line-height:1;margin-bottom:.5rem;}
 .result-name{font-size:2.4rem;font-weight:900;margin-bottom:.5rem;}
 .result-cal{display:inline-block;background:rgba(255,255,255,.25);border-radius:999px;padding:.3rem 1.2rem;font-size:.95rem;font-weight:600;}
+.adopt-banner{background:linear-gradient(135deg,#43e97b,#38f9d7);border-radius:14px;padding:.8rem 1.2rem;text-align:center;margin:.4rem 0 .8rem;box-shadow:0 4px 14px rgba(67,233,123,.3);}
 .wc-option{background:white;border:3px solid #ddd;border-radius:16px;padding:1.8rem 1.2rem;text-align:center;transition:all .18s;}
 .wc-option:hover{border-color:#667eea;background:#f8f0ff;}
 .wc-emoji{font-size:2.5rem;}.wc-name{font-size:1.3rem;font-weight:800;margin:.5rem 0;color:#1a1a2e;}.wc-cal{font-size:.85rem;color:#aaa;}
@@ -223,7 +224,7 @@ MENU_DATA = {
         {"name":"짬뽕","cal":700,"emoji":"🍜","food_type":"면","delivery":True,"budget":"저"},
         {"name":"탕수육","cal":800,"emoji":"🥩","food_type":"고기","delivery":True,"budget":"중"},
         {"name":"마파두부","cal":400,"emoji":"🌶️","food_type":"밥","delivery":True,"budget":"중"},
-        {"name":"딤섬","cal":500,"emoji":"🥟","food_type":"기false","delivery":False,"budget":"중"},
+        {"name":"딤섬","cal":500,"emoji":"🥟","food_type":"기타","delivery":False,"budget":"중"},
         {"name":"마라탕","cal":700,"emoji":"🥢","food_type":"기타","delivery":True,"budget":"중"},
         {"name":"마라샹궈","cal":800,"emoji":"🌶️","food_type":"기타","delivery":True,"budget":"중"},
         {"name":"훠궈","cal":750,"emoji":"🫕","food_type":"기타","delivery":False,"budget":"고"},
@@ -302,13 +303,31 @@ def init():
             st.session_state[k] = v
 init()
 
-# ── 쿼리 파라미터를 통한 JS 통신 브릿지 ───────────────────────
-# iframe 내의 javascript 결과값을 수신하기 위한 로직
-params = st.query_string
+# ── 쿼리 파라미터를 통한 JS 통신 브릿지 (버전 호환성 보완) ───
+params = {}
+try:
+    # 최신 버전 Streamlit 방식
+    params = st.query_string
+except AttributeError:
+    try:
+        # 구버전 Streamlit 방식
+        params = st.experimental_get_query_params()
+    except:
+        pass
+
+# 쿼리 파라미터에 결과가 들어왔는지 확인
 if "js_menu_result" in params:
-    res_name = params["js_menu_result"]
-    # 쿼리 파라미터 비우기 및 결과 매칭
-    st.query_string.clear()
+    # 구버전은 리스트 형태로 값을 반환하므로 안전하게 처리
+    res_val = params["js_menu_result"]
+    res_name = res_val[0] if isinstance(res_val, list) else res_val
+    
+    # 쿼리 파라미터 초기화
+    try:
+        st.query_string.clear()
+    except AttributeError:
+        st.experimental_set_query_params()
+        
+    # 결과 매칭 및 세션 반영
     base_m = MENU_DATA.get(st.session_state.active_cat, []) + st.session_state.custom_menus
     matched = next((m for m in base_m if m["name"] == res_name), None)
     if matched:
@@ -355,10 +374,10 @@ def adopt_button(menu, method, key_suffix=""):
     """채택 버튼 — 클릭 시 히스토리에 기록하고 성공 메시지 표시"""
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button(f"✅ {menu['name']}(으)로 메뉴 결정!", key=f"adopt_{key_suffix}", use_container_width=True, type="primary"):
+        if st.button(f"✅ {menu['name']} (으)로 결정!", key=f"adopt_{key_suffix}", use_container_width=True, type="primary"):
             add_history(menu, method)
             st.success(f"🎉 **{menu['name']}** 이(가) 오늘의 메뉴로 기록됐어요!")
-            # 채택 후 리셋 및 새로고침
+            # 채택 후 상태 초기화
             reset_method()
             st.rerun()
 
@@ -516,8 +535,6 @@ else:
         st.markdown("### 🎡 룰렛")
         menu_list_json = _json.dumps(
             [{"name":m["name"],"emoji":m.get("emoji","🍽️"),"cal":m.get("cal",0)} for m in menus], ensure_ascii=False)
-        
-        # parent window URL을 파싱하여 결과를 파라미터로 다시 쏴주는 JS 브릿지 탑재
         roulette_html = f"""
 <style>
   #roulette-wrap{{display:flex;flex-direction:column;align-items:center;gap:1.2rem;font-family:'Noto Sans KR',sans-serif;padding:.5rem 0 1rem;}}
@@ -584,7 +601,7 @@ else:
         document.getElementById('result-box').style.display='block';
         spinning=false;document.getElementById('spin-btn').disabled=false;
         
-        // Streamlit에 결과 주입을 위한 URL 트리거 생성
+        // 브릿지 통신
         setTimeout(function() {{
             const pUrl = new URL(window.parent.location.href);
             pUrl.searchParams.set('js_menu_result', winner.name);
@@ -598,7 +615,7 @@ else:
 </script>"""
         st.components.v1.html(roulette_html, height=720, scrolling=False)
 
-        # 뽑힌 결과물이 세션에 존재할 때만 다이렉트로 채택버튼 활성화
+        # 뽑힌 결과물이 브릿지를 통해 세션으로 들어왔을 때 채택 버튼 노출
         if st.session_state.pending_adopt:
             st.markdown("---")
             result_card(st.session_state.pending_adopt, "🎡 룰렛 추천")
@@ -652,7 +669,6 @@ else:
 </script>"""
         st.components.v1.html(scratch_html, height=310)
 
-        # 스크래치 카드 채택 버튼
         if m:
             adopt_button(m, "🃏 스크래치", key_suffix=f"scratch_{m['name']}")
 
@@ -749,7 +765,7 @@ else:
         document.getElementById('dice-label').textContent='주사위 '+val+' → '+(idx+1)+'번 메뉴';
         btn.disabled=false;btn.textContent='🔄 다시 굴리기!';rolling=false;
 
-        // Streamlit 부모 프레임에 결과 반환 및 전송
+        // 브릿지 통신
         setTimeout(function() {{
             const pUrl = new URL(window.parent.location.href);
             pUrl.searchParams.set('js_menu_result', winner.name);
@@ -762,7 +778,7 @@ else:
 </script>"""
         st.components.v1.html(dice_html, height=440, scrolling=False)
 
-        # 주사위 구동 결과물 매칭 채택
+        # 뽑힌 결과물이 브릿지를 통해 세션으로 들어왔을 때 채택 버튼 노출
         if st.session_state.pending_adopt:
             st.markdown("---")
             result_card(st.session_state.pending_adopt, "🎲 주사위 추천")
