@@ -592,8 +592,8 @@ else:
                     if st.button(f"✅ {b['name']}", key=f"wb_{idx}", use_container_width=True, type="primary"):
                         ts["winners"].append(b); ts["pair_idx"] += 1; st.rerun()
 
-    # ══════════════════════════════════════════════════════
-    # 주사위 ← 수정된 부분
+ # ══════════════════════════════════════════════════════
+    # 주사위
     # ══════════════════════════════════════════════════════
     elif method == "dice":
         st.markdown("### 🎲 주사위")
@@ -601,6 +601,19 @@ else:
             [{"name": m["name"], "emoji": m.get("emoji", "🍽️"), "cal": m.get("cal", 0)} for m in menus],
             ensure_ascii=False
         )
+
+        # JS → Streamlit 연동: 결과 메뉴 이름을 query param으로 전달
+        import urllib.parse
+        params = st.query_params
+        if "dice_result" in params:
+            result_name = params["dice_result"]
+            picked = next((m for m in menus if m["name"] == result_name), None)
+            if picked and st.session_state.get("_dice_last") != result_name:
+                add_history(picked, "🎲 주사위")
+                st.session_state._dice_last = result_name
+                st.session_state._random_result = picked
+            del st.query_params["dice_result"]
+
         dice_html = f"""
 <style>
   #dice-wrap {{
@@ -677,11 +690,7 @@ else:
 <script>
 (function(){{
   const MENUS = {menu_list_json};
-  // 주사위 눈을 깔끔한 텍스트(숫자)로 표현 — 이모지 깨짐 방지
   const FACES = ['1','2','3','4','5','6'];
-  const DOTS  = [
-    '⠀●⠀<br>⠀⠀⠀<br>⠀⠀⠀',  // 편의상 textContent 로 처리
-  ];
   let spinning = false;
 
   window.rollDice = function() {{
@@ -693,16 +702,14 @@ else:
     const face   = document.getElementById('dice-face');
     const btn    = document.getElementById('roll-btn');
 
-    box.style.display   = 'none';
-    numLbl.textContent  = '';
-    btn.disabled        = true;
+    box.style.display  = 'none';
+    numLbl.textContent = '';
+    btn.disabled       = true;
 
-    // 흔들기 애니메이션 재시작
     face.classList.remove('shaking');
     void face.offsetWidth;
     face.classList.add('shaking');
 
-    // 결과 미리 결정
     const finalVal = Math.floor(Math.random() * 6) + 1;
     const finalIdx = (finalVal * 3 - 1) % MENUS.length;
     const winner   = MENUS[finalIdx];
@@ -714,31 +721,30 @@ else:
       if (count > 16) {{
         clearInterval(iv);
 
-        // ① 주사위 최종 눈 확정
-        face.textContent = finalVal;
-
-        // ② 눈 라벨
-        numLbl.textContent = '🎲 ' + finalVal + '이(가) 나왔어요!';
-
-        // ③ 결과 카드 채우기
+        face.textContent       = finalVal;
+        numLbl.textContent     = '🎲 ' + finalVal + '이(가) 나왔어요!';
         document.getElementById('result-emoji').textContent = winner.emoji;
         document.getElementById('result-name').textContent  = winner.name;
         document.getElementById('result-cal').textContent   = '🔥 약 ' + winner.cal + ' kcal';
         document.getElementById('result-sub').textContent   =
           '주사위 ' + finalVal + '  ·  ' + (finalIdx + 1) + '번 메뉴';
-
-        // ④ 카드 표시
         box.style.display = 'block';
 
-        btn.disabled     = false;
-        btn.textContent  = '🔄 다시 굴리기!';
-        spinning         = false;
+        btn.disabled    = false;
+        btn.textContent = '🔄 다시 굴리기!';
+        spinning        = false;
+
+        // ✅ 결과를 query param으로 전달 → Streamlit 리런 유도
+        const url = new URL(window.parent.location.href);
+        url.searchParams.set('dice_result', winner.name);
+        window.parent.history.replaceState(null, '', url.toString());
+        // iframe → parent 페이지 리로드 트리거
+        window.parent.location.href = url.toString();
       }}
     }}, 75);
   }};
 }})();
 </script>"""
-        # height=640 으로 결과 카드가 잘리지 않도록 여유 확보
         st.components.v1.html(dice_html, height=640, scrolling=False)
 
     # ══════════════════════════════════════════════════════
