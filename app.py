@@ -1,4 +1,4 @@
-cat > /home/claude/app_final.py << 'PYEOF'
+
 import streamlit as st
 import random
 import json as _json
@@ -1039,5 +1039,4 @@ with tab_mgmt:
             else:   st.session_state.excluded.discard(m["name"])
         if st.session_state.excluded:
             st.markdown(f"<div style='color:#f5576c;font-size:.82rem;margin-top:.5rem'>제외 중: {', '.join(st.session_state.excluded)}</div>", unsafe_allow_html=True)
-PYEOF
-echo "Done $(wc -l < /home/claude/app_final.py) lines"
+
