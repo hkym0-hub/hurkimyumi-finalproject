@@ -1257,15 +1257,22 @@ with tab_feed:
         similar = random.sample(similar, min(4, len(similar)))
         st.markdown(f"<p style='color:#555;font-size:.9rem'>'{last_name}' 과 비슷한 메뉴들</p>", unsafe_allow_html=True)
         scols = st.columns(len(similar)) if similar else []
-        for col, m in zip(scols, similar):
-            with col:
-                st.markdown(f"""<div style="background:white;border-radius:12px;padding:.8rem;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.07);">
-                    <div style="font-size:1.8rem">{m['emoji']}</div>
-                    <div style="font-size:.85rem;font-weight:700;color:#1a1a2e;margin:.3rem 0">{m['name']}</div>
-                    <div style="font-size:.75rem;color:#aaa">{m['cal']} kcal · {m.get('food_type','')}</div>
-                </div>""", unsafe_allow_html=True)
-                if st.button("채택", key=f"sim_{m['name']}", use_container_width=True):
-                    add_history(m, "🔗 비슷한 메뉴"); st.success(f"{m['name']} 기록됨!"); st.rerun()
+        for i, (col, m) in enumerate(zip(scols, similar)):
+    with col:
+        st.markdown(f"""<div style="background:white;border-radius:12px;padding:.8rem;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+            <div style="font-size:1.8rem">{m['emoji']}</div>
+            <div style="font-size:.85rem;font-weight:700;color:#1a1a2e;margin:.3rem 0">{m['name']}</div>
+            <div style="font-size:.75rem;color:#aaa">{m['cal']} kcal · {m.get('food_type','')}</div>
+        </div>""", unsafe_allow_html=True)
+
+        if st.button(
+            "채택",
+            key=f"sim_{m['name']}_{i}",
+            use_container_width=True
+        ):
+            add_history(m, "🔗 비슷한 메뉴")
+            st.success(f"{m['name']} 기록됨!")
+            st.rerun()
     else:
         st.info("먼저 메뉴를 채택하면 비슷한 메뉴를 추천해드려요!")
 
