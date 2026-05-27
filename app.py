@@ -514,21 +514,39 @@ sendBtn.onclick = function() {{
 </html>
 """
 
-        result = components.html(roulette_html, height=520, scrolling=False)
+       result = components.html(roulette_html, height=520, scrolling=False)
 
-        if not st.session_state.roulette_done:
-            st.info("💡 룰렛 바퀴를 돌려서 오늘의 메뉴를 결정하세요!")
-                
-        else:
-            winner = st.session_state.roulette_winner
-            st.balloons()
-            result_card(winner, "🎡 룰렛 추천")
-            adopt_button(winner, "🎡 룰렛", key_suffix="roulette_win")
-            if st.button("🔄 다시 돌리기", use_container_width=True):
-                st.session_state.roulette_done = False
-                st.session_state.roulette_winner = None
-                st.session_state.roulette_winner_idx = random.randint(0, len(menus)-1)
-                st.rerun()
+if isinstance(result, str):
+
+    if result.startswith("spinning:"):
+        idx = int(result.split(":")[1])
+        st.session_state.roulette_done = True
+        st.session_state.roulette_winner = menus[idx]
+
+    elif result.startswith("adopt:"):
+        idx = int(result.split(":")[1])
+        winner = menus[idx]
+
+        add_history(winner, "🎡 룰렛")
+        st.success(f"🎉 **{winner['name']}** 이(가) 오늘의 메뉴로 기록됐어요!")
+
+        reset_method()
+        st.rerun()
+
+    elif result == "respin":
+        st.session_state.roulette_done = False
+        st.session_state.roulette_winner = None
+        st.session_state.roulette_winner_idx = random.randint(0, len(menus)-1)
+        st.rerun()
+
+if not st.session_state.roulette_done:
+    st.info("💡 룰렛 바퀴를 돌려서 오늘의 메뉴를 결정하세요!")
+else:
+    winner = st.session_state.roulette_winner
+    st.balloons()
+    result_card(winner, "🎡 룰렛 추천")
+    adopt_button(winner, "🎡 룰렛", key_suffix="roulette_win")
+
 
     # ── 스크래치 (Canvas 진짜 긁기) ─────────────────────────────
     elif method == "scratch":
