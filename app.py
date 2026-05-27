@@ -518,12 +518,8 @@ sendBtn.onclick = function() {{
 
         if not st.session_state.roulette_done:
             st.info("💡 룰렛 바퀴를 돌려서 오늘의 메뉴를 결정하세요!")
-            col1, col2, col3 = st.columns([1,2,1])
-            with col2:
-                if st.button("🎡 Python으로 룰렛 돌리기!", key="roulette_spin_py", type="primary", use_container_width=True):
-                    st.session_state.roulette_winner = menus[st.session_state.roulette_winner_idx]
-                    st.session_state.roulette_done = True
-                    st.rerun()
+        
+            
         else:
             winner = st.session_state.roulette_winner
             st.balloons()
