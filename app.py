@@ -1,6 +1,9 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import random
 import time
+import os
+import json
 from datetime import datetime, date
 from collections import Counter, defaultdict
 
@@ -79,10 +82,30 @@ FORTUNES = [
     ("누군가와 함께하고 싶은 날 🤝", "여럿이 나눠 먹기 좋은 메뉴로!"),
 ]
 
+# ── 영구 저장용 JSON 헬퍼 ─────────────────────────────────────
+HISTORY_FILE = "menu_history.json"
+
+def load_history():
+    if os.path.exists(HISTORY_FILE):
+        try:
+            with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            return []
+    return []
+
+def save_history_to_file(history_list):
+    try:
+        with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+            json.dump(history_list, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        st.error(f"기록 저장 중 오류 발생: {e}")
+
 # ── 세션 초기화 ───────────────────────────────────────────────
 def init():
     defaults = {
-        "history": [], "excluded": set(), "custom_menus": [],
+        "history": load_history(), # 파일에서 초기 기록 불러오기
+        "excluded": set(), "custom_menus": [],
         "active_cat": "저녁 메뉴", "active_method": None,
         "tournament_state": None, "scratch_revealed": False,
         "scratch_menu": None, "last_result": None,
@@ -104,7 +127,7 @@ def init():
     if not isinstance(st.session_state.excluded, set):
         st.session_state.excluded = set()
     if not isinstance(st.session_state.history, list):
-        st.session_state.history = []
+        st.session_state.history = load_history()
     if not isinstance(st.session_state.custom_menus, list):
         st.session_state.custom_menus = []
     if not isinstance(st.session_state.today_log, list):
@@ -145,9 +168,16 @@ def add_history(menu, method):
              "time": datetime.now().strftime("%m/%d %H:%M"),
              "hour": datetime.now().hour,
              "food_type": menu.get("food_type","기타")}
+    
     st.session_state.history.insert(0, entry)
-    if len(st.session_state.history) > 50:
-        st.session_state.history = st.session_state.history[:50]
+    
+    # 500개까지만 보관하여 용량 관리 (원하면 더 늘려도 됩니다)
+    if len(st.session_state.history) > 500:
+        st.session_state.history = st.session_state.history[:500]
+        
+    # 영구 저장소(JSON)에 기록 쓰기
+    save_history_to_file(st.session_state.history)
+    
     st.session_state.last_result = entry
     today = date.today().isoformat()
     st.session_state.today_log.append({"menu": menu["name"], "emoji": menu.get("emoji","🍽️"),
@@ -158,7 +188,7 @@ def adopt_button(menu, method, key_suffix=""):
     with col2:
         if st.button(f"✅ {menu['name']} (으)로 결정!", key=f"adopt_{key_suffix}", use_container_width=True, type="primary"):
             add_history(menu, method)
-            st.success(f"🎉 **{menu['name']}** 이(가) 오늘의 메뉴로 기록됐어요!")
+            st.success(f"🎉 **{menu['name']}** 이(가) 오늘의 메뉴로 기록됐어요! (보관소에 안전하게 저장됨)")
             reset_method()
             st.rerun()
 
@@ -266,8 +296,8 @@ if len(menus) < 2:
 elif method is None:
     METHODS = [
         ("random",   "랜덤",       "버튼 한 번에 즉시 추천",          "🎲"),
-        ("roulette", "룰렛",       "돌아가는 룰렛 바퀴",              "🎡"),
-        ("scratch",  "스크래치",   "비밀의 상자 까보기",              "🎁"),
+        ("roulette", "룰렛",       "회전하는 룰렛 바퀴",              "🎡"),
+        ("scratch",  "스크래치",   "마우스로 직접 긁어서 확인",        "🎁"),
         ("worldcup", "월드컵",     "1:1 대결로 최후의 1개",           "🏆"),
         ("dice",     "주사위",     "주사위 굴려서 결정",              "🎲"),
         ("tarot",    "카드 뽑기",  "타로카드 스타일 3장 중 선택",     "🃏"),
@@ -310,60 +340,401 @@ else:
                 st.session_state._random_result = random.choice(menus)
                 st.rerun()
 
-    # ── 룰렛 (파이썬 네이티브) ─────────────────────────────────
+    # ── 룰렛 (Canvas 회전 바퀴) ───────────────────────────────
     elif method == "roulette":
         st.markdown("### 🎡 룰렛 바퀴")
-        ph = st.empty()
-        
-        if not st.session_state.get('roulette_done'):
-            if ph.button("🎡 룰렛 돌리기!", type="primary", use_container_width=True):
-                st.session_state.roulette_winner = random.choice(menus)
-                st.session_state.roulette_done = True
-                
-                with ph.container():
-                    st.markdown("<h3 style='text-align:center; color:#667eea; margin-bottom:1rem;'>룰렛이 돌아갑니다... 🌀</h3>", unsafe_allow_html=True)
-                    anim_placeholder = st.empty()
-                    for i in range(15):
-                        m = random.choice(menus)
-                        anim_placeholder.markdown(f"""<div class="result-card" style="opacity:0.6; transform: scale(0.95); margin:0;">
-                            <div class="result-emoji">{m.get('emoji','🍽️')}</div>
-                            <div class="result-name">{m['name']}</div>
-                        </div>""", unsafe_allow_html=True)
-                        time.sleep(0.05 + i * 0.01)
-                st.rerun()
+
+        winner_idx = random.randint(0, len(menus) - 1)
+        if not st.session_state.roulette_done:
+            st.session_state.roulette_winner_idx = winner_idx
+
+        menu_names = [m["name"] for m in menus]
+        menu_emojis = [m.get("emoji", "🍽️") for m in menus]
+
+        import json
+        names_json = json.dumps(menu_names, ensure_ascii=False)
+        emojis_json = json.dumps(menu_emojis, ensure_ascii=False)
+        target_idx = st.session_state.roulette_winner_idx
+        already_done = "true" if st.session_state.roulette_done else "false"
+
+        roulette_html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * {{ margin:0; padding:0; box-sizing:border-box; }}
+  body {{ background:transparent; font-family:'Noto Sans KR',sans-serif; display:flex; flex-direction:column; align-items:center; padding:20px 10px; }}
+  #roulette-wrap {{ position:relative; width:340px; height:340px; }}
+  #wheel-canvas {{ border-radius:50%; box-shadow:0 8px 40px rgba(102,126,234,0.45); display:block; }}
+  #needle {{ position:absolute; top:-18px; left:50%; transform:translateX(-50%); width:0; height:0;
+    border-left:14px solid transparent; border-right:14px solid transparent;
+    border-top:38px solid #f5576c;
+    filter:drop-shadow(0 4px 8px rgba(245,87,108,0.6));
+    z-index:10; }}
+  #center-dot {{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:28px; height:28px; background:white; border-radius:50%;
+    box-shadow:0 2px 10px rgba(0,0,0,0.2); z-index:10; }}
+  #spin-btn {{ margin-top:24px; padding:14px 56px; font-size:1.1rem; font-weight:800;
+    background:linear-gradient(135deg,#667eea,#764ba2); color:white; border:none;
+    border-radius:999px; cursor:pointer; box-shadow:0 6px 24px rgba(102,126,234,0.4);
+    transition:transform .15s, box-shadow .15s; font-family:'Noto Sans KR',sans-serif; }}
+  #spin-btn:hover {{ transform:translateY(-2px); box-shadow:0 10px 32px rgba(102,126,234,0.55); }}
+  #spin-btn:disabled {{ opacity:0.5; cursor:not-allowed; transform:none; }}
+  #result-box {{ margin-top:20px; padding:16px 32px; background:linear-gradient(135deg,#667eea,#764ba2);
+    border-radius:16px; color:white; text-align:center; display:none; animation:fadeUp .5s ease; }}
+  #result-box .r-emoji {{ font-size:2.4rem; }}
+  #result-box .r-name {{ font-size:1.4rem; font-weight:900; margin-top:6px; }}
+  @keyframes fadeUp {{ from {{ opacity:0; transform:translateY(16px); }} to {{ opacity:1; transform:translateY(0); }} }}
+  #send-btn {{ margin-top:12px; padding:10px 32px; font-size:.95rem; font-weight:700;
+    background:rgba(255,255,255,0.25); color:white; border:2px solid rgba(255,255,255,0.5);
+    border-radius:999px; cursor:pointer; font-family:'Noto Sans KR',sans-serif; }}
+  #send-btn:hover {{ background:rgba(255,255,255,0.4); }}
+</style>
+</head>
+<body>
+<div id="roulette-wrap">
+  <div id="needle"></div>
+  <canvas id="wheel-canvas" width="340" height="340"></canvas>
+  <div id="center-dot"></div>
+</div>
+<button id="spin-btn">🎡 룰렛 돌리기!</button>
+<div id="result-box">
+  <div class="r-emoji" id="r-emoji"></div>
+  <div class="r-name" id="r-name"></div>
+  <button id="send-btn">✅ 이 메뉴로 결정!</button>
+</div>
+
+<script>
+const NAMES = {names_json};
+const EMOJIS = {emojis_json};
+const TARGET_IDX = {target_idx};
+const ALREADY_DONE = {already_done};
+const N = NAMES.length;
+const COLORS = [
+  '#667eea','#764ba2','#f093fb','#f5576c','#4facfe','#00f2fe',
+  '#43e97b','#38f9d7','#fa709a','#fee140','#a18cd1','#fbc2eb',
+  '#a1c4fd','#c2e9fb','#fd746c','#ff9a9e','#ffecd2','#fcb69f'
+];
+
+const canvas = document.getElementById('wheel-canvas');
+const ctx = canvas.getContext('2d');
+const spinBtn = document.getElementById('spin-btn');
+const resultBox = document.getElementById('result-box');
+const rEmoji = document.getElementById('r-emoji');
+const rName = document.getElementById('r-name');
+const sendBtn = document.getElementById('send-btn');
+
+const sliceAngle = (2 * Math.PI) / N;
+let currentAngle = 0;
+let spinning = false;
+let finalAngle = 0;
+
+function drawWheel(angle) {{
+  ctx.clearRect(0, 0, 340, 340);
+  const cx = 170, cy = 170, r = 165;
+  for (let i = 0; i < N; i++) {{
+    const start = angle + i * sliceAngle;
+    const end = start + sliceAngle;
+    // slice
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, start, end);
+    ctx.closePath();
+    ctx.fillStyle = COLORS[i % COLORS.length];
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // text
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(start + sliceAngle / 2);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 13px "Noto Sans KR", sans-serif';
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+    ctx.shadowBlur = 4;
+    const label = EMOJIS[i] + ' ' + (NAMES[i].length > 6 ? NAMES[i].slice(0,6)+'…' : NAMES[i]);
+    ctx.fillText(label, r - 12, 5);
+    ctx.restore();
+  }}
+  // outer ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, 2*Math.PI);
+  ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+}}
+
+drawWheel(0);
+
+// The needle points DOWN from top = angle 3π/2 = 270°
+// So the winning slice center should be at 3π/2
+// slice i center angle (from wheel's 0) = i * sliceAngle + sliceAngle/2
+// We want: currentAngle + i*sliceAngle + sliceAngle/2 = 3π/2  (mod 2π)
+// => currentAngle = 3π/2 - i*sliceAngle - sliceAngle/2
+
+function spin() {{
+  if (spinning) return;
+  spinning = true;
+  spinBtn.disabled = true;
+
+  const targetAngle = (3 * Math.PI / 2) - TARGET_IDX * sliceAngle - sliceAngle / 2;
+  const extraSpins = (5 + Math.floor(Math.random() * 4)) * 2 * Math.PI;
+  finalAngle = targetAngle + extraSpins;
+
+  const duration = 4500;
+  const start = performance.now();
+  const startAngle = currentAngle;
+
+  function easeOut(t) {{
+    return 1 - Math.pow(1 - t, 4);
+  }}
+
+  function animate(now) {{
+    const elapsed = now - start;
+    const t = Math.min(elapsed / duration, 1);
+    currentAngle = startAngle + (finalAngle - startAngle) * easeOut(t);
+    drawWheel(currentAngle);
+    if (t < 1) {{
+      requestAnimationFrame(animate);
+    }} else {{
+      spinning = false;
+      currentAngle = finalAngle % (2 * Math.PI);
+      showResult();
+    }}
+  }}
+  requestAnimationFrame(animate);
+}}
+
+function showResult() {{
+  rEmoji.textContent = EMOJIS[TARGET_IDX];
+  rName.textContent = NAMES[TARGET_IDX];
+  resultBox.style.display = 'block';
+}}
+
+if (ALREADY_DONE) {{
+  // restore to final position and show result
+  const targetAngle = (3 * Math.PI / 2) - TARGET_IDX * sliceAngle - sliceAngle / 2;
+  currentAngle = targetAngle % (2 * Math.PI);
+  drawWheel(currentAngle);
+  showResult();
+  spinBtn.textContent = '🔄 다시 돌리기';
+  spinBtn.disabled = false;
+  spinBtn.onclick = function() {{
+    resultBox.style.display = 'none';
+    window.parent.postMessage({{type:'streamlit:setComponentValue', value: 'respin'}}, '*');
+  }};
+}} else {{
+  spinBtn.onclick = function() {{
+    spin();
+    spinBtn.textContent = '🔄 다시 돌리기';
+    window.parent.postMessage({{type:'streamlit:setComponentValue', value: 'spinning:' + TARGET_IDX}}, '*');
+  }};
+}}
+
+sendBtn.onclick = function() {{
+  window.parent.postMessage({{type:'streamlit:setComponentValue', value: 'adopt:' + TARGET_IDX}}, '*');
+}};
+</script>
+</body>
+</html>
+"""
+
+        result = components.html(roulette_html, height=520, scrolling=False)
+
+        if not st.session_state.roulette_done:
+            st.info("💡 룰렛 바퀴를 돌려서 오늘의 메뉴를 결정하세요!")
+            col1, col2, col3 = st.columns([1,2,1])
+            with col2:
+                if st.button("🎡 Python으로 룰렛 돌리기!", key="roulette_spin_py", type="primary", use_container_width=True):
+                    st.session_state.roulette_winner = menus[st.session_state.roulette_winner_idx]
+                    st.session_state.roulette_done = True
+                    st.rerun()
         else:
             winner = st.session_state.roulette_winner
             st.balloons()
             result_card(winner, "🎡 룰렛 추천")
             adopt_button(winner, "🎡 룰렛", key_suffix="roulette_win")
-            
             if st.button("🔄 다시 돌리기", use_container_width=True):
                 st.session_state.roulette_done = False
+                st.session_state.roulette_winner = None
+                st.session_state.roulette_winner_idx = random.randint(0, len(menus)-1)
                 st.rerun()
 
-    # ── 스크래치 (박스 까보기 - 파이썬 네이티브) ─────────────────
+    # ── 스크래치 (Canvas 진짜 긁기) ─────────────────────────────
     elif method == "scratch":
-        st.markdown("### 🎁 비밀의 상자 (스크래치)")
-        
-        if not st.session_state.get('scratch_revealed'):
-            st.markdown("""
-            <div style="background:linear-gradient(135deg, #ccc, #aaa); border-radius:20px; padding:3rem; text-align:center; box-shadow:0 8px 32px rgba(0,0,0,.15); margin-bottom:1rem;">
-                <div style="font-size:4.5rem; line-height:1;">❓</div>
-                <div style="font-size:1.5rem; font-weight:900; color:white; margin-top:1rem;">오늘의 메뉴는?</div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            if st.button("🪙 여기를 눌러서 결과 확인하기!", type="primary", use_container_width=True):
-                st.session_state.scratch_menu = random.choice(menus)
-                st.session_state.scratch_revealed = True
+        st.markdown("### 🎁 스크래치 복권")
+
+        if not st.session_state.scratch_menu:
+            st.session_state.scratch_menu = random.choice(menus)
+
+        menu = st.session_state.scratch_menu
+        menu_name = menu["name"]
+        menu_emoji = menu.get("emoji", "🍽️")
+        menu_cal = menu.get("cal", 0)
+
+        scratch_html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * {{ margin:0; padding:0; box-sizing:border-box; }}
+  body {{ background:transparent; font-family:'Noto Sans KR',sans-serif;
+    display:flex; flex-direction:column; align-items:center; padding:20px 10px; }}
+  #scratch-wrap {{ position:relative; width:360px; height:220px; border-radius:20px;
+    overflow:hidden; box-shadow:0 8px 40px rgba(0,0,0,0.2); cursor:crosshair; user-select:none; }}
+  #result-layer {{ position:absolute; inset:0; background:linear-gradient(135deg,#667eea,#764ba2);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; }}
+  #result-emoji {{ font-size:3.2rem; line-height:1; }}
+  #result-name {{ font-size:1.8rem; font-weight:900; color:white; margin-top:8px; text-shadow:0 2px 8px rgba(0,0,0,0.3); }}
+  #result-cal {{ font-size:.9rem; color:rgba(255,255,255,0.8); margin-top:4px; }}
+  #scratch-canvas {{ position:absolute; inset:0; }}
+  #hint {{ margin-top:14px; font-size:.9rem; color:#888; font-weight:600; text-align:center; }}
+  #pct-bar-wrap {{ width:360px; height:10px; background:#e0e0e0; border-radius:999px; margin-top:10px; overflow:hidden; }}
+  #pct-bar {{ height:10px; background:linear-gradient(90deg,#667eea,#f5576c); border-radius:999px; width:0%; transition:width .1s; }}
+  #done-msg {{ margin-top:14px; font-size:1rem; font-weight:800; color:#667eea; display:none; animation:pop .4s cubic-bezier(.175,.885,.32,1.275); }}
+  @keyframes pop {{ from {{ transform:scale(0.5); opacity:0; }} to {{ transform:scale(1); opacity:1; }} }}
+  #adopt-btn {{ margin-top:14px; padding:12px 44px; font-size:1rem; font-weight:800;
+    background:linear-gradient(135deg,#667eea,#764ba2); color:white; border:none;
+    border-radius:999px; cursor:pointer; display:none; font-family:'Noto Sans KR',sans-serif;
+    box-shadow:0 6px 20px rgba(102,126,234,0.4); animation:pop .4s .1s both cubic-bezier(.175,.885,.32,1.275); }}
+  #adopt-btn:hover {{ filter:brightness(1.1); }}
+  #retry-btn {{ margin-top:8px; padding:8px 28px; font-size:.9rem; font-weight:700;
+    background:white; color:#667eea; border:2px solid #667eea;
+    border-radius:999px; cursor:pointer; display:none; font-family:'Noto Sans KR',sans-serif; }}
+</style>
+</head>
+<body>
+<div id="scratch-wrap">
+  <div id="result-layer">
+    <div id="result-emoji">{menu_emoji}</div>
+    <div id="result-name">{menu_name}</div>
+    <div id="result-cal">🔥 {menu_cal} kcal</div>
+  </div>
+  <canvas id="scratch-canvas" width="360" height="220"></canvas>
+</div>
+<div id="hint">🖱️ 마우스 또는 손가락으로 긁어보세요!</div>
+<div id="pct-bar-wrap"><div id="pct-bar"></div></div>
+<div id="done-msg">🎉 완전히 긁었어요!</div>
+<button id="adopt-btn">✅ {menu_name} (으)로 결정!</button>
+<button id="retry-btn">🔄 다시 뽑기</button>
+
+<script>
+const canvas = document.getElementById('scratch-canvas');
+const ctx = canvas.getContext('2d');
+const W = 360, H = 220;
+
+// Draw scratch layer - shiny silver scratch card style
+const grad = ctx.createLinearGradient(0, 0, W, H);
+grad.addColorStop(0, '#c0c0c0');
+grad.addColorStop(0.3, '#e8e8e8');
+grad.addColorStop(0.5, '#f5f5f5');
+grad.addColorStop(0.7, '#d0d0d0');
+grad.addColorStop(1, '#a8a8a8');
+ctx.fillStyle = grad;
+ctx.fillRect(0, 0, W, H);
+
+// Pattern on top
+ctx.fillStyle = 'rgba(0,0,0,0.06)';
+for (let x = 0; x < W; x += 28) {{
+  for (let y = 0; y < H; y += 28) {{
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI*2);
+    ctx.fill();
+  }}
+}}
+
+// Text on scratch layer
+ctx.fillStyle = 'rgba(120,120,120,0.7)';
+ctx.font = 'bold 22px "Noto Sans KR",sans-serif';
+ctx.textAlign = 'center';
+ctx.fillText('🎁 긁어서 메뉴 확인!', W/2, H/2 - 10);
+ctx.font = '14px "Noto Sans KR",sans-serif';
+ctx.fillText('← SCRATCH HERE →', W/2, H/2 + 20);
+
+ctx.globalCompositeOperation = 'destination-out';
+
+let isDrawing = false;
+let totalPixels = W * H;
+let scratchedPct = 0;
+let revealed = false;
+
+function getPos(e) {{
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width;
+  const scaleY = H / rect.height;
+  if (e.touches) {{
+    return {{ x: (e.touches[0].clientX - rect.left) * scaleX, y: (e.touches[0].clientY - rect.top) * scaleY }};
+  }}
+  return {{ x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY }};
+}}
+
+function scratch(e) {{
+  if (!isDrawing) return;
+  e.preventDefault();
+  const pos = getPos(e);
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, 28, 0, Math.PI*2);
+  ctx.fill();
+  checkProgress();
+}}
+
+function checkProgress() {{
+  const imageData = ctx.getImageData(0, 0, W, H);
+  let transparent = 0;
+  for (let i = 3; i < imageData.data.length; i += 4) {{
+    if (imageData.data[i] === 0) transparent++;
+  }}
+  scratchedPct = Math.min((transparent / totalPixels) * 100, 100);
+  document.getElementById('pct-bar').style.width = scratchedPct + '%';
+
+  if (scratchedPct > 60 && !revealed) {{
+    revealed = true;
+    // Clear all
+    ctx.clearRect(0, 0, W, H);
+    document.getElementById('hint').style.display = 'none';
+    document.getElementById('done-msg').style.display = 'block';
+    document.getElementById('adopt-btn').style.display = 'inline-block';
+    document.getElementById('retry-btn').style.display = 'inline-block';
+  }}
+}}
+
+canvas.addEventListener('mousedown', e => {{ isDrawing = true; scratch(e); }});
+canvas.addEventListener('mousemove', scratch);
+canvas.addEventListener('mouseup', () => isDrawing = false);
+canvas.addEventListener('mouseleave', () => isDrawing = false);
+canvas.addEventListener('touchstart', e => {{ isDrawing = true; scratch(e); }}, {{passive:false}});
+canvas.addEventListener('touchmove', scratch, {{passive:false}});
+canvas.addEventListener('touchend', () => isDrawing = false);
+
+document.getElementById('adopt-btn').onclick = function() {{
+  window.parent.postMessage({{type:'streamlit:setComponentValue', value: 'adopt'}}, '*');
+}};
+document.getElementById('retry-btn').onclick = function() {{
+  window.parent.postMessage({{type:'streamlit:setComponentValue', value: 'retry'}}, '*');
+}};
+</script>
+</body>
+</html>
+"""
+
+        comp_result = components.html(scratch_html, height=400, scrolling=False)
+
+        st.markdown("<div style='height:.5rem'></div>", unsafe_allow_html=True)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("✅ 이 메뉴로 결정!", key="scratch_adopt", type="primary", use_container_width=True):
+                add_history(menu, "🎁 스크래치")
+                st.success(f"🎉 **{menu['name']}** 이(가) 오늘의 메뉴로 기록됐어요!")
+                reset_method()
                 st.rerun()
-        else:
-            winner = st.session_state.scratch_menu
-            result_card(winner, "🎁 비밀의 상자")
-            adopt_button(winner, "🎁 스크래치", key_suffix="scratch_win")
-            
-            if st.button("🔄 새 상자 열기", use_container_width=True):
-                st.session_state.scratch_revealed = False
+        with col2:
+            if st.button("🔄 다시 뽑기", key="scratch_retry", use_container_width=True):
+                st.session_state.scratch_menu = random.choice(menus)
                 st.rerun()
 
     # ── 월드컵 ───────────────────────────────────────────────
@@ -404,61 +775,250 @@ else:
                     if st.button(f"✅ {b['name']}", key=f"wb_{idx}", use_container_width=True, type="primary"):
                         ts["winners"].append(b); ts["pair_idx"] += 1; st.rerun()
 
-    # ── 주사위 (파이썬 네이티브 애니메이션) ──────────────────────────
+    # ── 주사위 ──────────────────────────────────────────────
     elif method == "dice":
         st.markdown("### 🎲 주사위")
-        
-        ph = st.empty()
-        
-        if not st.session_state.get('dice_winner'):
-            with ph.container():
-                st.markdown("""
-                <div style="display:flex;flex-direction:column;align-items:center;padding:2.5rem 0;opacity:0.35;">
-                    <div style="font-size:7.5rem; line-height:1; color:#555;">⚀</div>
-                    <div style="font-size:0.95rem; font-weight:600; margin-top:0.8rem;">아래 버튼을 눌러 주사위를 굴려보세요!</div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-            if st.button("🎲 주사위 굴리기!", type="primary", use_container_width=True):
-                faces = ['⚀','⚁','⚂','⚃','⚄','⚅']
-                
-                # 주사위 굴러가는 애니메이션 (Python 네이티브)
-                for i in range(12):
-                    temp_face = random.choice(faces)
-                    rot = random.randint(-30, 30)
-                    with ph.container():
-                        st.markdown(f"""
-                        <div style="display:flex;flex-direction:column;align-items:center;padding:1.5rem 0;">
-                            <div style="font-size:7.5rem; line-height:1; color:#1a1a2e; transform: rotate({rot}deg); transition: transform 0.1s;">{temp_face}</div>
-                            <div style="font-size:1.1rem; font-weight:800; color:#aaa; margin-top:0.8rem;">주사위 굴러가는 중... 🎲</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    time.sleep(0.05 + i * 0.01) # 갈수록 조금씩 느려지는 효과
-                
-                # 최종 결과 결정
-                st.session_state.dice_winner = random.choice(menus)
-                st.session_state.dice_face = random.randint(1, 6)
-                st.rerun()
-        else:
+
+        import json as _json
+        dice_face = st.session_state.get("dice_face", 1)
+        dice_done = st.session_state.dice_winner is not None
+        winner_name = st.session_state.dice_winner["name"] if dice_done else ""
+        winner_emoji = st.session_state.dice_winner.get("emoji","🍽️") if dice_done else ""
+        winner_cal = st.session_state.dice_winner.get("cal",0) if dice_done else 0
+
+        dice_html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * {{ margin:0; padding:0; box-sizing:border-box; }}
+  body {{ background:transparent; font-family:'Noto Sans KR',sans-serif;
+    display:flex; flex-direction:column; align-items:center; padding:24px 10px; gap:0; }}
+  #scene {{ width:180px; height:180px; perspective:600px; margin-bottom:20px; }}
+  #cube {{ width:100%; height:100%; position:relative; transform-style:preserve-3d;
+    transform: rotateX(0deg) rotateY(0deg);
+    transition: none; }}
+  .face {{ position:absolute; width:180px; height:180px; border-radius:22px;
+    background:white; border:none;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:inset 0 0 0 4px rgba(0,0,0,0.08), 0 4px 24px rgba(0,0,0,0.12);
+    font-size:3.2rem; }}
+  .face.front  {{ transform: translateZ(90px); }}
+  .face.back   {{ transform: rotateY(180deg) translateZ(90px); }}
+  .face.right  {{ transform: rotateY(90deg)  translateZ(90px); }}
+  .face.left   {{ transform: rotateY(-90deg) translateZ(90px); }}
+  .face.top    {{ transform: rotateX(90deg)  translateZ(90px); }}
+  .face.bottom {{ transform: rotateX(-90deg) translateZ(90px); }}
+  /* dot grid */
+  .dots {{ display:grid; width:100%; height:100%; padding:20px; }}
+  .dot {{ width:22px; height:22px; border-radius:50%; background:#1a1a2e; }}
+  /* face 1 */
+  .f1 {{ grid-template-columns:1fr; grid-template-rows:1fr; place-items:center; }}
+  /* face 2 */
+  .f2 {{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; }}
+  .f2 .d1 {{ grid-column:1; grid-row:1; align-self:start; justify-self:start; }}
+  .f2 .d2 {{ grid-column:2; grid-row:2; align-self:end;   justify-self:end;   }}
+  /* face 3 */
+  .f3 {{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr 1fr; }}
+  .f3 .d1 {{ grid-column:1; grid-row:1; align-self:start; justify-self:start; }}
+  .f3 .d2 {{ grid-column:2; grid-row:2; align-self:center; justify-self:end; }}
+  .f3 .d3 {{ grid-column:1; grid-row:3; align-self:end; justify-self:start; }}
+  /* face 4 */
+  .f4 {{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:8px; place-items:center; }}
+  /* face 5 */
+  .f5 {{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr 1fr; gap:4px; place-items:center; }}
+  .f5 .d5 {{ grid-column:1/3; grid-row:2; }}
+  /* face 6 */
+  .f6 {{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr 1fr; gap:4px; place-items:center; }}
+
+  #roll-btn {{ padding:14px 56px; font-size:1.1rem; font-weight:800;
+    background:linear-gradient(135deg,#667eea,#764ba2); color:white; border:none;
+    border-radius:999px; cursor:pointer; box-shadow:0 6px 24px rgba(102,126,234,0.45);
+    font-family:'Noto Sans KR',sans-serif; transition:transform .15s, box-shadow .15s; }}
+  #roll-btn:hover {{ transform:translateY(-2px); box-shadow:0 10px 32px rgba(102,126,234,0.55); }}
+  #roll-btn:disabled {{ opacity:0.5; cursor:not-allowed; transform:none; }}
+  #face-label {{ font-size:1rem; font-weight:700; color:#667eea; margin-top:14px;
+    opacity:0; transition:opacity .4s; min-height:1.4em; }}
+  #result-box {{ margin-top:18px; padding:18px 36px; background:linear-gradient(135deg,#667eea,#764ba2);
+    border-radius:18px; color:white; text-align:center; display:none;
+    animation:fadeUp .5s ease; }}
+  #result-box .r-emoji {{ font-size:2.2rem; }}
+  #result-box .r-name  {{ font-size:1.4rem; font-weight:900; margin-top:6px; }}
+  #result-box .r-cal   {{ font-size:.85rem; opacity:.8; margin-top:4px; }}
+  @keyframes fadeUp {{ from {{ opacity:0; transform:translateY(14px); }} to {{ opacity:1; transform:translateY(0); }} }}
+</style>
+</head>
+<body>
+<div id="scene">
+  <div id="cube">
+    <div class="face front">
+      <div class="dots f1"><div class="dot"></div></div>
+    </div>
+    <div class="face back">
+      <div class="dots f6">
+        <div class="dot"></div><div class="dot"></div>
+        <div class="dot"></div><div class="dot"></div>
+        <div class="dot"></div><div class="dot"></div>
+      </div>
+    </div>
+    <div class="face right">
+      <div class="dots f2">
+        <div class="dot d1"></div><div class="dot" style="grid-column:2;grid-row:1;align-self:start;justify-self:end;"></div>
+        <div class="dot" style="grid-column:1;grid-row:2;align-self:end;justify-self:start;"></div><div class="dot d2"></div>
+      </div>
+    </div>
+    <div class="face left">
+      <div class="dots f5">
+        <div class="dot"></div><div class="dot"></div>
+        <div class="dot d5"></div>
+        <div class="dot"></div><div class="dot"></div>
+      </div>
+    </div>
+    <div class="face top">
+      <div class="dots f3">
+        <div class="dot d1"></div><div style="grid-column:2;grid-row:1;"></div>
+        <div style="grid-column:1;grid-row:2;"></div><div class="dot d2"></div>
+        <div class="dot d3"></div><div style="grid-column:2;grid-row:3;"></div>
+      </div>
+    </div>
+    <div class="face bottom">
+      <div class="dots f4">
+        <div class="dot"></div><div class="dot"></div>
+        <div class="dot"></div><div class="dot"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button id="roll-btn">🎲 주사위 굴리기!</button>
+<div id="face-label"></div>
+<div id="result-box">
+  <div class="r-emoji" id="r-emoji">{winner_emoji}</div>
+  <div class="r-name"  id="r-name">{winner_name}</div>
+  <div class="r-cal"   id="r-cal">🔥 {winner_cal} kcal</div>
+</div>
+
+<script>
+const FINAL_FACE = {dice_face};
+const ALREADY_DONE = {"true" if dice_done else "false"};
+
+// Target rotations so each face number is front-facing
+// front=1 → rotX=0 rotY=0
+// back=6  → rotX=0 rotY=180
+// right=2 → rotX=0 rotY=-90
+// left=5  → rotX=0 rotY=90
+// top=3   → rotX=90 rotY=0   (wait, need to test)
+// bottom=4→ rotX=-90 rotY=0
+const FACE_ROTS = {{
+  1: [0, 0],
+  2: [0, -90],
+  3: [-90, 0],
+  4: [90, 0],
+  5: [0, 90],
+  6: [0, 180],
+}};
+
+const cube = document.getElementById('cube');
+const btn  = document.getElementById('roll-btn');
+const label = document.getElementById('face-label');
+const resultBox = document.getElementById('result-box');
+
+let currentX = 0, currentY = 0;
+
+function setRotation(x, y, animate) {{
+  if (animate) {{
+    cube.style.transition = 'transform 0.08s linear';
+  }} else {{
+    cube.style.transition = 'none';
+  }}
+  cube.style.transform = `rotateX(${{x}}deg) rotateY(${{y}}deg)`;
+  currentX = x; currentY = y;
+}}
+
+function showResult() {{
+  label.style.opacity = '1';
+  label.textContent = `주사위 ${{FINAL_FACE}} 🎲 당첨!`;
+  resultBox.style.display = 'block';
+  btn.textContent = '🔄 다시 굴리기';
+  btn.disabled = false;
+  btn.onclick = function() {{
+    window.parent.postMessage({{type:'streamlit:setComponentValue', value:'reroll'}}, '*');
+  }};
+}}
+
+function rollAnimation() {{
+  btn.disabled = true;
+  label.style.opacity = '0';
+  resultBox.style.display = 'none';
+
+  const totalFrames = 40;
+  let frame = 0;
+
+  // Generate random tumbling sequence
+  const sequence = [];
+  for (let i = 0; i < totalFrames; i++) {{
+    const speedFactor = i < 20 ? 1 : (i < 32 ? 0.6 : 0.25);
+    sequence.push({{
+      x: currentX + (Math.random() - 0.5) * 180 * speedFactor,
+      y: currentY + (Math.random() - 0.5) * 180 * speedFactor,
+    }});
+  }}
+
+  // Last few frames ease into the final face
+  const [finalX, finalY] = FACE_ROTS[FINAL_FACE];
+  // Add extra full spins + final position
+  const spinX = Math.round(currentX / 360) * 360 + finalX + 720;
+  const spinY = Math.round(currentY / 360) * 360 + finalY + 1080;
+
+  function step() {{
+    if (frame < sequence.length) {{
+      setRotation(sequence[frame].x, sequence[frame].y, false);
+      frame++;
+      // Slow down over time
+      const delay = frame < 20 ? 30 : frame < 32 ? 55 : 90;
+      setTimeout(step, delay);
+    }} else {{
+      // Smooth settle to final
+      cube.style.transition = 'transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+      cube.style.transform = `rotateX(${{spinX}}deg) rotateY(${{spinY}}deg)`;
+      currentX = spinX; currentY = spinY;
+      setTimeout(showResult, 700);
+      // Notify streamlit
+      window.parent.postMessage({{type:'streamlit:setComponentValue', value:'rolled:' + FINAL_FACE}}, '*');
+    }}
+  }}
+  step();
+}}
+
+if (ALREADY_DONE) {{
+  const [fx, fy] = FACE_ROTS[FINAL_FACE];
+  setRotation(fx, fy, false);
+  showResult();
+}} else {{
+  btn.onclick = rollAnimation;
+}}
+</script>
+</body>
+</html>
+"""
+        components.html(dice_html, height=480, scrolling=False)
+
+        if dice_done:
             winner = st.session_state.dice_winner
             face = st.session_state.dice_face
-            faces = ['⚀','⚁','⚂','⚃','⚄','⚅']
-            
-            with ph.container():
-                st.markdown(f"""
-                <div style="display:flex;flex-direction:column;align-items:center;padding:1.5rem 0;">
-                    <div style="font-size:7.5rem; line-height:1; color:#1a1a2e;">{faces[face-1]}</div>
-                    <div style="font-size:1.1rem; font-weight:800; color:#667eea; margin-top:0.8rem;">주사위 {face} → 당첨!</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            st.markdown("---")
             result_card(winner, f"🎲 주사위 추천 (숫자 {face})")
             adopt_button(winner, "🎲 주사위", key_suffix="dice_live")
-            
             if st.button("🔄 다시 굴리기", use_container_width=True):
                 st.session_state.dice_winner = None
                 st.rerun()
+        else:
+            col1, col2, col3 = st.columns([1,2,1])
+            with col2:
+                if st.button("🎲 주사위 굴리기!", key="dice_py_btn", type="primary", use_container_width=True):
+                    st.session_state.dice_winner = random.choice(menus)
+                    st.session_state.dice_face = random.randint(1, 6)
+                    st.rerun()
 
     # ── 카드 뽑기 ────────────────────────────────────────────
     elif method == "tarot":
@@ -549,8 +1109,8 @@ else:
 
 # ── 하단 탭 ──────────────────────────────────────────────────
 st.markdown("<hr style='border:none;border-top:2px solid #ddd;margin:1.5rem 0 1rem'>", unsafe_allow_html=True)
-tab_hist, tab_tracker, tab_rank, tab_analysis, tab_feed, tab_mgmt = st.tabs([
-    "📋 추천 이력", "🔥 칼로리 트래커", "🏅 메뉴 랭킹", "📊 식습관 분석", "💡 추천 피드", "🔧 메뉴 관리"
+tab_hist, tab_tracker, tab_rank, tab_analysis, tab_feed, tab_mgmt, tab_archive = st.tabs([
+    "📋 추천 이력", "🔥 칼로리 트래커", "🏅 메뉴 랭킹", "📊 식습관 분석", "💡 추천 피드", "🔧 메뉴 관리", "🗄️ 기록 보관소"
 ])
 
 # ── 추천 이력 ─────────────────────────────────────────────────
@@ -563,14 +1123,16 @@ with tab_hist:
         with c2: st.metric("자주 쓴 방식",  max(set(methods_l), key=methods_l.count))
         with c3: st.metric("최다 채택 메뉴", max(set(menus_l),   key=menus_l.count))
         st.markdown("<div style='height:.4rem'></div>", unsafe_allow_html=True)
-        for h in st.session_state.history:
+        for h in st.session_state.history[:50]: # 최근 50개만 표시
             st.markdown(f"""<div class="hist-item">
                 <div>{h['emoji']} <b style="color:#111">{h['menu']}</b>
                 <span style="color:#aaa;font-size:.82rem"> · {h['time']} · {h['method']} · {h['cat']}</span></div>
                 <div style="color:#667eea;font-weight:700">{h['cal']} kcal</div>
             </div>""", unsafe_allow_html=True)
-        if st.button("🗑️ 이력 초기화"):
-            st.session_state.history = []; st.rerun()
+        if st.button("🗑️ 최근 이력 초기화"):
+            st.session_state.history = []
+            save_history_to_file([])
+            st.rerun()
     else:
         st.info("아직 채택한 메뉴가 없어요! 추천 결과에서 '✅ 이 메뉴로 결정!' 버튼을 눌러 기록하세요.")
 
@@ -607,7 +1169,7 @@ with tab_tracker:
         st.markdown("**최근 7일 칼로리**")
         daily = defaultdict(int)
         for e in st.session_state.today_log: daily[e["date"]] += e["cal"]
-        sorted_days = sorted(daily.keys())[-7:]; max_cal = max(daily.values())
+        sorted_days = sorted(daily.keys())[-7:]; max_cal = max(daily.values()) if daily else 1
         for d in sorted_days:
             bw = daily[d] / max_cal * 100; label = "오늘" if d == today else d[5:]
             st.markdown(f"""<div style="display:flex;align-items:center;gap:.8rem;margin:.3rem 0">
@@ -797,3 +1359,25 @@ with tab_mgmt:
             else:   st.session_state.excluded.discard(m["name"])
         if st.session_state.excluded:
             st.markdown(f"<div style='color:#f5576c;font-size:.82rem;margin-top:.5rem'>제외 중: {', '.join(st.session_state.excluded)}</div>", unsafe_allow_html=True)
+
+# ── 보관소 ──────────────────────────────────────────────────
+with tab_archive:
+    st.markdown("### 🗄️ 전체 과거 기록 보관소")
+    st.markdown("새로고침을 해도 날아가지 않고 서버(파일)에 영구 보관되는 기록입니다. (최대 500개 유지)")
+    
+    all_data = load_history()
+    if all_data:
+        st.metric("총 누적 채택 건수", f"{len(all_data)}건")
+        
+        # 목록을 깔끔한 형태로 출력
+        for h in all_data:
+            st.markdown(f"**[{h.get('time', '')}]** {h.get('emoji','')} **{h.get('menu','')}** ({h.get('cal',0)}kcal) &nbsp; <span style='color:#aaa;font-size:0.85rem'>· {h.get('method','')}</span>", unsafe_allow_html=True)
+            
+        st.markdown("<hr>", unsafe_allow_html=True)
+        if st.button("🚨 보관소 전체 초기화 (주의)", type="secondary"):
+            save_history_to_file([])
+            st.session_state.history = []
+            st.success("모든 영구 보관 기록이 초기화되었습니다.")
+            st.rerun()
+    else:
+        st.info("보관된 과거 기록이 없습니다. 메뉴를 채택하면 자동으로 이곳에 저장됩니다!")
