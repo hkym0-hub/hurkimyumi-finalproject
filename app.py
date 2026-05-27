@@ -4,6 +4,7 @@ import random
 import time
 from datetime import datetime, date
 from collections import Counter, defaultdict
+import json
 
 st.set_page_config(page_title="오늘의 추천 메뉴", page_icon="🍽️", layout="wide", initial_sidebar_state="collapsed")
 
@@ -227,7 +228,7 @@ with st.expander("🔍 조건 필터", expanded=False):
     fc1, fc2, fc3, fc4 = st.columns(4)
     with fc1:
         cal_range = st.slider("🔥 칼로리 범위 (kcal)", 0, 1200,
-                              (st.session_state.filter_cal_min, st.session_state.filter_cal_max), 50)
+                             (st.session_state.filter_cal_min, st.session_state.filter_cal_max), 50)
         st.session_state.filter_cal_min, st.session_state.filter_cal_max = cal_range
     with fc2:
         ft = st.selectbox("🍽️ 음식 종류", ["전체","밥","면","고기","기타"],
@@ -267,14 +268,14 @@ if len(menus) < 2:
     st.warning("⚠️ 메뉴가 2개 이상 필요합니다. 필터를 완화하거나 다른 카테고리를 선택하세요.")
 elif method is None:
     METHODS = [
-        ("random",   "랜덤",       "버튼 한 번에 즉시 추천",          "🎲"),
-        ("roulette", "룰렛",       "회전하는 룰렛 바퀴",              "🎡"),
-        ("scratch",  "스크래치",   "마우스로 직접 긁어서 확인",        "🎁"),
-        ("worldcup", "월드컵",     "1:1 대결로 최후의 1개",           "🏆"),
-        ("dice",     "주사위",     "주사위 굴려서 결정",              "🎲"),
+        ("random",   "랜덤",     "버튼 한 번에 즉시 추천",          "🎲"),
+        ("roulette", "룰렛",     "회전하는 룰렛 바퀴",               "🎡"),
+        ("scratch",  "스크래치",  "마우스로 직접 긁어서 확인",        "🎁"),
+        ("worldcup", "월드컵",    "1:1 대결로 최후의 1개",           "🏆"),
+        ("dice",     "주사위",    "주사위 굴려서 결정",               "🎲"),
         ("tarot",    "카드 뽑기",  "타로카드 스타일 3장 중 선택",     "🃏"),
         ("smart",    "스마트 추천","최근 안 먹은 메뉴 위주 추천",     "🧠"),
-        ("battle",   "대결 모드",  "두 사람 의견, 랜덤 결정",     "⚔️"),
+        ("battle",   "대결 모드",  "두 사람 의견, 랜덤 결정",        "⚔️"),
     ]
     rows = [st.columns(4, gap="medium") for _ in range(2)]
     for idx, (key, label, desc, emoji) in enumerate(METHODS):
@@ -323,7 +324,6 @@ else:
         menu_names = [m["name"] for m in menus]
         menu_emojis = [m.get("emoji", "🍽️") for m in menus]
 
-        import json
         names_json = json.dumps(menu_names, ensure_ascii=False)
         emojis_json = json.dumps(menu_emojis, ensure_ascii=False)
         target_idx = st.session_state.roulette_winner_idx
@@ -518,8 +518,6 @@ sendBtn.onclick = function() {{
 
         if not st.session_state.roulette_done:
             st.info("💡 룰렛 바퀴를 돌려서 오늘의 메뉴를 결정하세요!")
-        
-            
         else:
             winner = st.session_state.roulette_winner
             st.balloons()
@@ -747,7 +745,6 @@ document.getElementById('retry-btn').onclick = function() {{
     elif method == "dice":
         st.markdown("### 🎲 주사위")
 
-        import json as _json
         dice_face = st.session_state.get("dice_face", 1)
         dice_done = st.session_state.dice_winner is not None
         winner_name = st.session_state.dice_winner["name"] if dice_done else ""
@@ -820,7 +817,6 @@ document.getElementById('retry-btn').onclick = function() {{
 <body>
 <div id="scene">
   <div id="cube">
-    <!-- face: front=1, back=6, right=2, left=5, top=3, bottom=4 -->
     <div class="face front">
       <div class="dots f1"><div class="dot"></div></div>
     </div>
@@ -872,13 +868,6 @@ document.getElementById('retry-btn').onclick = function() {{
 const FINAL_FACE = {dice_face};
 const ALREADY_DONE = {"true" if dice_done else "false"};
 
-// Target rotations so each face number is front-facing
-// front=1 → rotX=0 rotY=0
-// back=6  → rotX=0 rotY=180
-// right=2 → rotX=0 rotY=-90
-// left=5  → rotX=0 rotY=90
-// top=3   → rotX=90 rotY=0   (wait, need to test)
-// bottom=4→ rotX=-90 rotY=0
 const FACE_ROTS = {{
   1: [0, 0],
   2: [0, -90],
@@ -924,7 +913,6 @@ function rollAnimation() {{
   const totalFrames = 40;
   let frame = 0;
 
-  // Generate random tumbling sequence
   const sequence = [];
   for (let i = 0; i < totalFrames; i++) {{
     const speedFactor = i < 20 ? 1 : (i < 32 ? 0.6 : 0.25);
@@ -934,9 +922,7 @@ function rollAnimation() {{
     }});
   }}
 
-  // Last few frames ease into the final face
   const [finalX, finalY] = FACE_ROTS[FINAL_FACE];
-  // Add extra full spins + final position
   const spinX = Math.round(currentX / 360) * 360 + finalX + 720;
   const spinY = Math.round(currentY / 360) * 360 + finalY + 1080;
 
@@ -944,16 +930,13 @@ function rollAnimation() {{
     if (frame < sequence.length) {{
       setRotation(sequence[frame].x, sequence[frame].y, false);
       frame++;
-      // Slow down over time
       const delay = frame < 20 ? 30 : frame < 32 ? 55 : 90;
       setTimeout(step, delay);
     }} else {{
-      // Smooth settle to final
       cube.style.transition = 'transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
       cube.style.transform = `rotateX(${{spinX}}deg) rotateY(${{spinY}}deg)`;
       currentX = spinX; currentY = spinY;
       setTimeout(showResult, 700);
-      // Notify streamlit
       window.parent.postMessage({{type:'streamlit:setComponentValue', value:'rolled:' + FINAL_FACE}}, '*');
     }}
   }}
