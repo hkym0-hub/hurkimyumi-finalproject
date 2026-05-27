@@ -484,182 +484,170 @@ else:
             adopt_button(r, "🎲 랜덤", key_suffix=f"random_{r['name']}")
 
     # ── 룰렛 (실제 바퀴 Canvas 애니메이션) ──────────────────────
-    elif method == "roulette":
-        st.markdown("### 🎡 룰렛 바퀴")
+  elif method == "roulette":
+    st.markdown("### 🎡 룰렛 바퀴")
 
-        # 룰렛 결과가 없으면 미리 하나 뽑아 세션에 저장
-        if st.session_state.roulette_winner is None:
-            st.session_state.roulette_winner = random.choice(menus)
+    display_menus = menus[:12] if len(menus) > 12 else menus
+    n = len(display_menus)
+    names_js = json.dumps([{"name": m["name"], "emoji": m.get("emoji","🍽️")} for m in display_menus])
 
-        winner = st.session_state.roulette_winner
-        winner_name = winner["name"]
+    COLORS = [
+        "#667eea","#f5576c","#43e97b","#fda085","#4facfe",
+        "#a18cd1","#ffecd2","#ff9a9e","#a8edea","#fddb92",
+        "#d299c2","#89f7fe"
+    ]
+    colors_js = json.dumps(COLORS[:n])
 
-        display_menus = menus[:12] if len(menus) > 12 else menus
-        # 승자가 바퀴에 반드시 포함되도록 보장
-        winner_in_display = next((m for m in display_menus if m["name"] == winner_name), None)
-        if winner_in_display is None:
-            display_menus[0] = winner
-        winner_idx_in_display = next(i for i, m in enumerate(display_menus) if m["name"] == winner_name)
+    roulette_html = f"""
+    <div style="font-family:'Noto Sans KR',sans-serif;text-align:center;padding:.5rem 0;">
+      <div style="position:relative;display:inline-block;">
+        <div style="
+          position:absolute;top:-18px;left:50%;transform:translateX(-50%);
+          width:0;height:0;
+          border-left:14px solid transparent;
+          border-right:14px solid transparent;
+          border-top:28px solid #f5576c;
+          filter:drop-shadow(0 3px 6px rgba(0,0,0,.4));
+          z-index:10;
+        "></div>
+        <canvas id="roulette-canvas" width="340" height="340"
+          style="border-radius:50%;box-shadow:0 8px 40px rgba(0,0,0,.35);display:block;">
+        </canvas>
+        <div style="
+          position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+          width:44px;height:44px;border-radius:50%;
+          background:white;border:4px solid #555;
+          box-shadow:0 2px 8px rgba(0,0,0,.3);
+          z-index:5;
+        "></div>
+      </div>
+      <br>
+      <button id="spin-btn" onclick="startSpin()" style="
+        margin-top:.8rem;
+        background:linear-gradient(135deg,#f5576c,#f093fb);
+        color:white;border:none;border-radius:14px;
+        padding:.8rem 2.8rem;font-size:1.1rem;font-weight:700;
+        cursor:pointer;font-family:'Noto Sans KR',sans-serif;
+        box-shadow:0 4px 18px rgba(245,87,108,.5);
+        transition:transform .1s;
+      " onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform='scale(1)'">
+        🎡 룰렛 돌리기!
+      </button>
+      <div id="result-area" style="margin-top:1rem;min-height:60px;"></div>
+    </div>
 
-        n = len(display_menus)
-        names_js = json.dumps([{"name": m["name"], "emoji": m.get("emoji","🍽️")} for m in display_menus])
-        winner_idx_js = winner_idx_in_display
+    <script>
+    const MENUS = {names_js};
+    const COLORS = {colors_js};
+    const N = MENUS.length;
+    const canvas = document.getElementById('roulette-canvas');
+    const ctx = canvas.getContext('2d');
+    const CX = canvas.width / 2, CY = canvas.height / 2, R = CX - 6;
+    const ARC = (2 * Math.PI) / N;
 
-        COLORS = [
-            "#667eea","#f5576c","#43e97b","#fda085","#4facfe",
-            "#a18cd1","#ffecd2","#ff9a9e","#a8edea","#fddb92",
-            "#d299c2","#89f7fe"
-        ]
-        colors_js = json.dumps(COLORS[:n])
+    let angle = 0;
+    let spinning = false;
 
-        roulette_html = f"""
-        <div style="font-family:'Noto Sans KR',sans-serif;text-align:center;padding:.5rem 0;">
-          <div style="position:relative;display:inline-block;">
-            <div style="
-              position:absolute;top:-18px;left:50%;transform:translateX(-50%);
-              width:0;height:0;
-              border-left:14px solid transparent;
-              border-right:14px solid transparent;
-              border-top:28px solid #f5576c;
-              filter:drop-shadow(0 3px 6px rgba(0,0,0,.4));
-              z-index:10;
-            "></div>
-            <canvas id="roulette-canvas" width="340" height="340"
-              style="border-radius:50%;box-shadow:0 8px 40px rgba(0,0,0,.35);display:block;">
-            </canvas>
-            <div style="
-              position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-              width:44px;height:44px;border-radius:50%;
-              background:white;border:4px solid #555;
-              box-shadow:0 2px 8px rgba(0,0,0,.3);
-              z-index:5;
-            "></div>
-          </div>
-          <br>
-          <button id="spin-btn" onclick="startSpin()" style="
-            margin-top:.8rem;
-            background:linear-gradient(135deg,#f5576c,#f093fb);
-            color:white;border:none;border-radius:14px;
-            padding:.8rem 2.8rem;font-size:1.1rem;font-weight:700;
-            cursor:pointer;font-family:'Noto Sans KR',sans-serif;
-            box-shadow:0 4px 18px rgba(245,87,108,.5);
-            transition:transform .1s;
-          " onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform='scale(1)'">
-            🎡 룰렛 돌리기!
-          </button>
-          <div id="result-area" style="margin-top:1rem;min-height:60px;"></div>
-        </div>
+    function drawWheel(rot) {{
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = 0; i < N; i++) {{
+        const start = rot + i * ARC;
+        const end   = start + ARC;
+        ctx.beginPath();
+        ctx.moveTo(CX, CY);
+        ctx.arc(CX, CY, R, start, end);
+        ctx.closePath();
+        ctx.fillStyle = COLORS[i % COLORS.length];
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
 
-        <script>
-        const MENUS = {names_js};
-        const COLORS = {colors_js};
-        const N = MENUS.length;
-        const WINNER_IDX = {winner_idx_js};
-        const canvas = document.getElementById('roulette-canvas');
-        const ctx = canvas.getContext('2d');
-        const CX = canvas.width / 2, CY = canvas.height / 2, R = CX - 6;
-        const ARC = (2 * Math.PI) / N;
+        ctx.save();
+        ctx.translate(CX, CY);
+        ctx.rotate(start + ARC / 2);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 13px "Noto Sans KR", sans-serif';
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.shadowBlur = 3;
+        const label = MENUS[i].emoji + ' ' + (MENUS[i].name.length > 6 ? MENUS[i].name.slice(0,6)+'…' : MENUS[i].name);
+        ctx.fillText(label, R - 12, 5);
+        ctx.restore();
+      }}
+      ctx.beginPath();
+      ctx.arc(CX, CY, R, 0, 2*Math.PI);
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+    }}
 
-        let angle = 0;
-        let spinning = false;
+    drawWheel(0);
 
-        function drawWheel(rot) {{
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          for (let i = 0; i < N; i++) {{
-            const start = rot + i * ARC;
-            const end   = start + ARC;
-            ctx.beginPath();
-            ctx.moveTo(CX, CY);
-            ctx.arc(CX, CY, R, start, end);
-            ctx.closePath();
-            ctx.fillStyle = COLORS[i % COLORS.length];
-            ctx.fill();
-            ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-            ctx.lineWidth = 2;
-            ctx.stroke();
+    function startSpin() {{
+      if (spinning) return;
+      spinning = true;
+      document.getElementById('spin-btn').disabled = true;
+      document.getElementById('result-area').innerHTML = '';
 
-            ctx.save();
-            ctx.translate(CX, CY);
-            ctx.rotate(start + ARC / 2);
-            ctx.textAlign = 'right';
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 13px "Noto Sans KR", sans-serif';
-            ctx.shadowColor = 'rgba(0,0,0,0.5)';
-            ctx.shadowBlur = 3;
-            const label = MENUS[i].emoji + ' ' + (MENUS[i].name.length > 6 ? MENUS[i].name.slice(0,6)+'…' : MENUS[i].name);
-            ctx.fillText(label, R - 12, 5);
-            ctx.restore();
-          }}
-          ctx.beginPath();
-          ctx.arc(CX, CY, R, 0, 2*Math.PI);
-          ctx.strokeStyle = 'rgba(255,255,255,0.8)';
-          ctx.lineWidth = 4;
-          ctx.stroke();
-        }}
+      const winnerIdx = Math.floor(Math.random() * N);
+      const targetAngle = -(Math.PI / 2) - (winnerIdx * ARC + ARC / 2);
+      const totalSpin = Math.PI * 2 * (5 + Math.random() * 5) + targetAngle - (angle % (Math.PI*2));
 
-        drawWheel(0);
+      const duration = 3500;
+      const start = performance.now();
+      const startAngle = angle;
 
-        function startSpin() {{
-          if (spinning) return;
-          spinning = true;
-          document.getElementById('spin-btn').disabled = true;
-          document.getElementById('result-area').innerHTML = '';
+      function ease(t) {{
+        return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
+      }}
 
-          // 미리 결정된 승자 인덱스로 바퀴가 정확히 멈춤
-          const winnerIdx = WINNER_IDX;
-          const targetAngle = -(Math.PI / 2) - (winnerIdx * ARC + ARC / 2);
-          const totalSpin = Math.PI * 2 * (5 + Math.random() * 5) + targetAngle - (angle % (Math.PI*2));
+      function frame(now) {{
+        const elapsed = now - start;
+        const t = Math.min(elapsed / duration, 1);
+        angle = startAngle + totalSpin * ease(t);
+        drawWheel(angle);
 
-          const duration = 3500;
-          const start = performance.now();
-          const startAngle = angle;
-
-          function ease(t) {{
-            return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
-          }}
-
-          function frame(now) {{
-            const elapsed = now - start;
-            const t = Math.min(elapsed / duration, 1);
-            angle = startAngle + totalSpin * ease(t);
-            drawWheel(angle);
-
-            if (t < 1) {{
-              requestAnimationFrame(frame);
-            }} else {{
-              spinning = false;
-              document.getElementById('spin-btn').disabled = false;
-              const winner = MENUS[winnerIdx];
-              document.getElementById('result-area').innerHTML = `
-                <div style="
-                  background:linear-gradient(135deg,#667eea,#764ba2);
-                  border-radius:16px;padding:1.2rem 2rem;
-                  color:white;font-weight:700;
-                  display:inline-block;
-                  box-shadow:0 6px 20px rgba(102,126,234,.4);
-                  animation:pop .4s cubic-bezier(.17,.67,.47,1.5);
-                ">
-                  <div style="font-size:2.5rem">${{winner.emoji}}</div>
-                  <div style="font-size:1.4rem;margin:.3rem 0">${{winner.name}}</div>
-                  <div style="font-size:.85rem;opacity:.8">🎉 당첨!</div>
-                </div>
-                <style>@keyframes pop{{from{{transform:scale(0.5);opacity:0}}to{{transform:scale(1);opacity:1}}}}</style>
-              `;
-            }}
-          }}
+        if (t < 1) {{
           requestAnimationFrame(frame);
+        }} else {{
+          spinning = false;
+          document.getElementById('spin-btn').disabled = false;
+          const winner = MENUS[winnerIdx];
+          document.getElementById('result-area').innerHTML = `
+            <div style="
+              background:linear-gradient(135deg,#667eea,#764ba2);
+              border-radius:16px;padding:1.2rem 2rem;
+              color:white;font-weight:700;
+              display:inline-block;
+              box-shadow:0 6px 20px rgba(102,126,234,.4);
+              animation:pop .4s cubic-bezier(.17,.67,.47,1.5);
+            ">
+              <div style="font-size:2.5rem">${{winner.emoji}}</div>
+              <div style="font-size:1.4rem;margin:.3rem 0">${{winner.name}}</div>
+              <div style="font-size:.85rem;opacity:.8">🎉 당첨!</div>
+            </div>
+            <style>@keyframes pop{{from{{transform:scale(0.5);opacity:0}}to{{transform:scale(1);opacity:1}}}}</style>
+          `;
         }}
-        </script>
-        """
+      }}
+      requestAnimationFrame(frame);
+    }}
+    </script>
+    """
 
-        components.html(roulette_html, height=500)
+    components.html(roulette_html, height=500)
 
-        # 룰렛 결과 바로 아래 채택 버튼
+    # ✅ 룰렛을 돌린 후에만 결과 카드/채택 버튼 표시
+    winner = st.session_state.roulette_winner
+    if winner is not None:
         result_card(winner, "🎡 룰렛 추천")
         adopt_button(winner, "🎡 룰렛", key_suffix="roulette_win")
 
+    col_retry, col_confirm = st.columns(2)
+    with col_retry:
         if st.button("🔄 다시 돌리기", use_container_width=True):
-            st.session_state.roulette_winner = random.choice(menus)
+            st.session_state.roulette_winner = None
             st.rerun()
 
     # ── 스크래치 (마우스 드래그로 긁기) ──────────────────────────
