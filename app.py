@@ -1,3 +1,4 @@
+
 import streamlit as st
 import streamlit.components.v1 as components
 import random
@@ -103,7 +104,6 @@ def save_persistent_data(data):
 
 # ── 세션 초기화 ───────────────────────────────────────────────
 def init():
-    # 영구 데이터 먼저 로드
     if "persistent_loaded" not in st.session_state:
         pdata = load_persistent_data()
         st.session_state.history    = pdata.get("history", [])
@@ -121,7 +121,7 @@ def init():
         "tarot_cards": None, "tarot_chosen": None,
         "filter_cal_min": 0, "filter_cal_max": 1200,
         "filter_food_type": "전체", "filter_delivery": "전체", "filter_budget": "전체",
-        "roulette_done": False, "roulette_winner": None,
+        "roulette_winner": None,
         "roulette_winner_idx": 0,
         "dice_winner": None, "dice_face": 1,
         "scratch_result_pending": None,
@@ -215,7 +215,6 @@ def reset_method():
     st.session_state.battle_result = None
     st.session_state.tarot_cards = None
     st.session_state.tarot_chosen = None
-    st.session_state.roulette_done = False
     st.session_state.roulette_winner = None
     st.session_state.roulette_winner_idx = 0
     st.session_state.dice_winner = None
@@ -338,10 +337,7 @@ else:
     if method == "random":
         st.markdown("### 🎲 랜덤 추천")
 
-        # 슬롯머신 HTML 컴포넌트
         menu_names_js = json.dumps([{"name": m["name"], "emoji": m.get("emoji","🍽️"), "cal": m.get("cal",0)} for m in menus])
-        winner_idx = random.randint(0, len(menus)-1) if not st.session_state._random_result else \
-                     next((i for i, m in enumerate(menus) if m["name"] == st.session_state._random_result["name"]), 0)
 
         slot_html = f"""
         <div style="font-family:'Noto Sans KR',sans-serif;text-align:center;padding:1rem 0;">
@@ -396,7 +392,6 @@ else:
         <script>
         const MENUS = {menu_names_js};
         let spinning = false;
-        let currentOffset = 0;
         const ITEM_HEIGHT = 60;
 
         function buildReel(extraItems) {{
@@ -406,7 +401,7 @@ else:
           items.forEach(m => {{
             const div = document.createElement('div');
             div.style.cssText = `
-              height:{ITEM_HEIGHT}px;display:flex;align-items:center;justify-content:center;
+              height:${{ITEM_HEIGHT}}px;display:flex;align-items:center;justify-content:center;
               gap:.6rem;width:100%;flex-shrink:0;
             `;
             div.innerHTML = `
@@ -427,22 +422,18 @@ else:
           const winnerIdx = Math.floor(Math.random() * MENUS.length);
           const winner = MENUS[winnerIdx];
 
-          // 넉넉한 앞패딩 아이템으로 릴 구성
           const padCount = 20;
           const padItems = Array.from({{length: padCount}}, () => MENUS[Math.floor(Math.random()*MENUS.length)]);
           buildReel(padItems);
 
           const reel = document.getElementById('slot-reel');
-          // 초기 위치: 가운데 아이템이 창 중앙에
-          const startTop = 40; // 창 높이 120px, 아이템 60px → 중앙 = 30px
+          const startTop = 40;
           reel.style.transition = 'none';
           reel.style.top = startTop + 'px';
 
-          // 목표: padItems 끝난 후 MENUS에서 winnerIdx 번째가 중앙에
           const targetIdx = padCount + winnerIdx;
           const targetTop = startTop - (targetIdx * ITEM_HEIGHT);
 
-          // 애니메이션: 빠르게 돌다가 천천히 멈춤
           setTimeout(() => {{
             reel.style.transition = 'top 2.5s cubic-bezier(0.15, 0.85, 0.35, 1.0)';
             reel.style.top = targetTop + 'px';
@@ -463,13 +454,11 @@ else:
                 </div>
                 <style>@keyframes fadeIn{{from{{opacity:0;transform:translateY(10px)}}to{{opacity:1;transform:translateY(0)}}}}</style>
               `;
-              // Streamlit에 결과 전달
               window.parent.postMessage({{type:'streamlit:setComponentValue', value: winner.name}}, '*');
             }}, 2600);
           }}, 50);
         }}
 
-        // 릴 초기 세팅
         buildReel([]);
         document.getElementById('slot-reel').style.top = '40px';
         </script>
@@ -477,7 +466,6 @@ else:
 
         result_from_slot = components.html(slot_html, height=380)
 
-        # 컴포넌트 값으로 결과 처리하기 어려우므로, 별도 버튼 방식도 병행
         st.markdown("<p style='text-align:center;color:#888;font-size:.85rem;margin-top:.5rem'>슬롯에서 결과 확인 후 아래에서 메뉴를 선택하세요</p>", unsafe_allow_html=True)
 
         col_l, col_r = st.columns(2)
@@ -495,13 +483,27 @@ else:
             result_card(r, "🎲 랜덤")
             adopt_button(r, "🎲 랜덤", key_suffix=f"random_{r['name']}")
 
-    # ── 룰렛 (실제 바퀴 SVG 애니메이션) ─────────────────────────
+    # ── 룰렛 (실제 바퀴 Canvas 애니메이션) ──────────────────────
     elif method == "roulette":
         st.markdown("### 🎡 룰렛 바퀴")
 
+        # 룰렛 결과가 없으면 미리 하나 뽑아 세션에 저장
+        if st.session_state.roulette_winner is None:
+            st.session_state.roulette_winner = random.choice(menus)
+
+        winner = st.session_state.roulette_winner
+        winner_name = winner["name"]
+
         display_menus = menus[:12] if len(menus) > 12 else menus
+        # 승자가 바퀴에 반드시 포함되도록 보장
+        winner_in_display = next((m for m in display_menus if m["name"] == winner_name), None)
+        if winner_in_display is None:
+            display_menus[0] = winner
+        winner_idx_in_display = next(i for i, m in enumerate(display_menus) if m["name"] == winner_name)
+
         n = len(display_menus)
         names_js = json.dumps([{"name": m["name"], "emoji": m.get("emoji","🍽️")} for m in display_menus])
+        winner_idx_js = winner_idx_in_display
 
         COLORS = [
             "#667eea","#f5576c","#43e97b","#fda085","#4facfe",
@@ -513,7 +515,6 @@ else:
         roulette_html = f"""
         <div style="font-family:'Noto Sans KR',sans-serif;text-align:center;padding:.5rem 0;">
           <div style="position:relative;display:inline-block;">
-            <!-- 화살표 포인터 -->
             <div style="
               position:absolute;top:-18px;left:50%;transform:translateX(-50%);
               width:0;height:0;
@@ -523,12 +524,9 @@ else:
               filter:drop-shadow(0 3px 6px rgba(0,0,0,.4));
               z-index:10;
             "></div>
-
             <canvas id="roulette-canvas" width="340" height="340"
               style="border-radius:50%;box-shadow:0 8px 40px rgba(0,0,0,.35);display:block;">
             </canvas>
-
-            <!-- 중앙 허브 -->
             <div style="
               position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
               width:44px;height:44px;border-radius:50%;
@@ -537,7 +535,6 @@ else:
               z-index:5;
             "></div>
           </div>
-
           <br>
           <button id="spin-btn" onclick="startSpin()" style="
             margin-top:.8rem;
@@ -550,7 +547,6 @@ else:
           " onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform='scale(1)'">
             🎡 룰렛 돌리기!
           </button>
-
           <div id="result-area" style="margin-top:1rem;min-height:60px;"></div>
         </div>
 
@@ -558,6 +554,7 @@ else:
         const MENUS = {names_js};
         const COLORS = {colors_js};
         const N = MENUS.length;
+        const WINNER_IDX = {winner_idx_js};
         const canvas = document.getElementById('roulette-canvas');
         const ctx = canvas.getContext('2d');
         const CX = canvas.width / 2, CY = canvas.height / 2, R = CX - 6;
@@ -571,7 +568,6 @@ else:
           for (let i = 0; i < N; i++) {{
             const start = rot + i * ARC;
             const end   = start + ARC;
-            // 부채꼴
             ctx.beginPath();
             ctx.moveTo(CX, CY);
             ctx.arc(CX, CY, R, start, end);
@@ -582,7 +578,6 @@ else:
             ctx.lineWidth = 2;
             ctx.stroke();
 
-            // 텍스트
             ctx.save();
             ctx.translate(CX, CY);
             ctx.rotate(start + ARC / 2);
@@ -595,8 +590,6 @@ else:
             ctx.fillText(label, R - 12, 5);
             ctx.restore();
           }}
-
-          // 테두리
           ctx.beginPath();
           ctx.arc(CX, CY, R, 0, 2*Math.PI);
           ctx.strokeStyle = 'rgba(255,255,255,0.8)';
@@ -612,8 +605,8 @@ else:
           document.getElementById('spin-btn').disabled = true;
           document.getElementById('result-area').innerHTML = '';
 
-          const winnerIdx = Math.floor(Math.random() * N);
-          // 포인터(상단 = -π/2)에서 winnerIdx 조각이 멈추도록 계산
+          // 미리 결정된 승자 인덱스로 바퀴가 정확히 멈춤
+          const winnerIdx = WINNER_IDX;
           const targetAngle = -(Math.PI / 2) - (winnerIdx * ARC + ARC / 2);
           const totalSpin = Math.PI * 2 * (5 + Math.random() * 5) + targetAngle - (angle % (Math.PI*2));
 
@@ -661,20 +654,13 @@ else:
 
         components.html(roulette_html, height=500)
 
-        st.markdown("<p style='text-align:center;color:#888;font-size:.85rem'>룰렛 결과 확인 후 아래에서 채택하세요</p>", unsafe_allow_html=True)
+        # 룰렛 결과 바로 아래 채택 버튼
+        result_card(winner, "🎡 룰렛 추천")
+        adopt_button(winner, "🎡 룰렛", key_suffix="roulette_win")
 
-        if not st.session_state.roulette_done:
-            if st.button("🎡 Python으로도 돌리기 (채택용)", use_container_width=True):
-                st.session_state.roulette_winner = random.choice(menus)
-                st.session_state.roulette_done = True
-                st.rerun()
-        else:
-            winner = st.session_state.roulette_winner
-            result_card(winner, "🎡 룰렛 추천")
-            adopt_button(winner, "🎡 룰렛", key_suffix="roulette_win")
-            if st.button("🔄 다시 돌리기", use_container_width=True):
-                st.session_state.roulette_done = False
-                st.rerun()
+        if st.button("🔄 다시 돌리기", use_container_width=True):
+            st.session_state.roulette_winner = random.choice(menus)
+            st.rerun()
 
     # ── 스크래치 (마우스 드래그로 긁기) ──────────────────────────
     elif method == "scratch":
@@ -694,8 +680,6 @@ else:
 
           <div style="position:relative;display:inline-block;border-radius:20px;overflow:hidden;
                box-shadow:0 10px 40px rgba(0,0,0,.25);">
-
-            <!-- 뒷면 (결과) -->
             <div style="
               width:320px;height:200px;
               background:linear-gradient(135deg,#667eea,#764ba2);
@@ -708,8 +692,6 @@ else:
                 🔥 {w_cal} kcal
               </div>
             </div>
-
-            <!-- 앞면 (스크래치 레이어) -->
             <canvas id="scratch-canvas"
               width="320" height="200"
               style="position:absolute;top:0;left:0;cursor:crosshair;touch-action:none;">
@@ -743,9 +725,7 @@ else:
         const ctx = canvas.getContext('2d');
         const W = canvas.width, H = canvas.height;
 
-        // 스크래치 레이어 그리기
         function drawScratchLayer() {{
-          // 은박 그라데이션
           const grad = ctx.createLinearGradient(0,0,W,H);
           grad.addColorStop(0,'#bdbdbd');
           grad.addColorStop(0.4,'#e0e0e0');
@@ -753,15 +733,11 @@ else:
           grad.addColorStop(1,'#757575');
           ctx.fillStyle = grad;
           ctx.fillRect(0,0,W,H);
-
-          // 반짝이 패턴
           ctx.fillStyle = 'rgba(255,255,255,0.15)';
           for(let i=0;i<30;i++) {{
             const x = Math.random()*W, y = Math.random()*H;
             ctx.fillRect(x,y,2,2);
           }}
-
-          // 텍스트
           ctx.fillStyle = 'rgba(80,80,80,0.7)';
           ctx.font = 'bold 18px "Noto Sans KR",sans-serif';
           ctx.textAlign = 'center';
@@ -772,7 +748,6 @@ else:
         }}
 
         drawScratchLayer();
-
         ctx.globalCompositeOperation = 'destination-out';
         let isDrawing = false;
 
@@ -1254,3 +1229,6 @@ with tab_mgmt:
             else:   st.session_state.excluded.discard(m["name"])
         if st.session_state.excluded:
             st.markdown(f"<div style='color:#f5576c;font-size:.82rem;margin-top:.5rem'>제외 중: {', '.join(st.session_state.excluded)}</div>", unsafe_allow_html=True)
+
+
+
