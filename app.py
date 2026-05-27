@@ -514,7 +514,7 @@ sendBtn.onclick = function() {{
 </html>
 """
 
-       result = components.html(roulette_html, height=520, scrolling=False)
+result = components.html(roulette_html, height=520, scrolling=False)
 
 if isinstance(result, str):
 
