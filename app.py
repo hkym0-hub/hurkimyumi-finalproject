@@ -420,7 +420,7 @@ else:
             result_card(r, "🎲 랜덤")
             adopt_button(r, "🎲 랜덤", key_suffix=f"random_{r['name']}")
 
-    # ── 룰렛 ✅ 변경: 드롭다운 제거, Python 버튼으로 바로 결과 + 채택
+# ── 룰렛 (수정된 코드)
     elif method == "roulette":
         st.markdown("### 🎡 룰렛 바퀴")
 
@@ -488,12 +488,17 @@ else:
             else {{
               spinning=false;
               document.getElementById('spin-btn').disabled=false;
-              const winner=MENUS[winnerIdx];
+              // Streamlit으로 승자 전달 (Streamlit component 통신 활용)
+              const winner = MENUS[winnerIdx];
+              window.parent.postMessage({{
+                type: "streamlit:setComponentValue",
+                value: winnerIdx
+              }}, "*");
               document.getElementById('result-area').innerHTML=`
                 <div style="background:linear-gradient(135deg,#667eea,#764ba2);border-radius:16px;padding:1.2rem 2rem;color:white;font-weight:700;display:inline-block;box-shadow:0 6px 20px rgba(102,126,234,.4);animation:pop .4s cubic-bezier(.17,.67,.47,1.5);">
                   <div style="font-size:2.5rem">${{winner.emoji}}</div>
                   <div style="font-size:1.4rem;margin:.3rem 0">${{winner.name}}</div>
-                  <div style="font-size:.85rem;opacity:.8">🎉 당첨!</div>
+                  <div style="font-size:.85rem;opacity:.8">🎉 룰렛 결과가 나왔어요!</div>
                 </div>
                 <style>@keyframes pop{{from{{transform:scale(0.5);opacity:0}}to{{transform:scale(1);opacity:1}}}}</style>`;
             }}
@@ -503,20 +508,14 @@ else:
         </script>
         """
 
-        components.html(roulette_html, height=500)
+        # Streamlit 컴포넌트 호출
+        comp = components.html(roulette_html, height=550)
+        
+        # 룰렛 결과값을 받아오기 위한 처리 (간편하게 index를 세션에 저장)
+        if comp is not None:
+            st.session_state.roulette_winner = display_menus[comp]
 
-        # ✅ 변경: 드롭다운 제거 → Python 버튼으로 바로 뽑기 + 결과 카드 + 채택 버튼
-        st.markdown("---")
-        col_spin, col_retry = st.columns(2)
-        with col_spin:
-            if st.button("🎡 Python으로도 돌리기", use_container_width=True, type="primary"):
-                st.session_state.roulette_winner = random.choice(display_menus)
-                st.rerun()
-        with col_retry:
-            if st.session_state.roulette_winner and st.button("🔄 다시 돌리기", use_container_width=True):
-                st.session_state.roulette_winner = random.choice(display_menus)
-                st.rerun()
-
+        # 결과가 있으면 바로 아래에 채택 버튼 표시
         if st.session_state.roulette_winner:
             result_card(st.session_state.roulette_winner, "🎡 룰렛 추천")
             adopt_button(st.session_state.roulette_winner, "🎡 룰렛", key_suffix="roulette_win")
