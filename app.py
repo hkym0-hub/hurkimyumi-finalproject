@@ -313,7 +313,7 @@ else:
                 st.session_state._random_result = random.choice(menus)
                 st.rerun()
 
-# ── 룰렛 (Canvas 회전 바퀴) ───────────────────────────────
+  # ── 룰렛 (Canvas 회전 바퀴) ───────────────────────────────
     elif method == "roulette":
         st.markdown("### 🎡 룰렛 바퀴")
 
@@ -323,7 +323,7 @@ else:
         names_json  = json.dumps(menu_names,  ensure_ascii=False)
         emojis_json = json.dumps(menu_emojis, ensure_ascii=False)
 
-        # 상태 관리 (주사위 모드와 동일한 패턴 적용)
+        # 상태 관리
         roulette_done = st.session_state.get("roulette_done", False)
         winner_idx = st.session_state.get("roulette_winner_idx", 0)
 
@@ -390,31 +390,53 @@ function drawWheel(angle){{
 
 // Streamlit에서 상태를 전달받아 애니메이션만 처리
 if (IS_DONE) {{
-  const targetAngle = (3*Math.PI/2) - TARGET_IDX*sliceAngle - sliceAngle/2;
-  const finalAngle  = targetAngle + (8 * 2 * Math.PI); // 8바퀴 추가 회전
-  const duration    = 4000;
-  const startTime   = performance.now();
-  
-  function easeOut(t){{ return 1-Math.pow(1-t,4); }}
-  function animate(now){{
-    const t = Math.min((now-startTime)/duration, 1);
-    drawWheel(finalAngle * easeOut(t));
-    if(t<1) requestAnimationFrame(animate);
-    else drawWheel(finalAngle % (2*Math.PI));
+  // Streamlit이 렌더링될 때마다 무조건 다시 도는 것을 방지
+  if (!sessionStorage.getItem('spin_done_' + TARGET_IDX)) {{
+    const targetAngle = (3*Math.PI/2) - TARGET_IDX*sliceAngle - sliceAngle/2;
+    const finalAngle  = targetAngle + (8 * 2 * Math.PI); // 8바퀴 추가 회전
+    const duration    = 4000;
+    const startTime   = performance.now();
+    
+    function easeOut(t){{ return 1-Math.pow(1-t,4); }}
+    function animate(now){{
+      const t = Math.min((now-startTime)/duration, 1);
+      drawWheel(finalAngle * easeOut(t));
+      if(t<1) requestAnimationFrame(animate);
+      else {{
+          drawWheel(finalAngle % (2*Math.PI));
+          sessionStorage.setItem('spin_done_' + TARGET_IDX, 'true'); // 애니메이션 완료 기록
+      }}
+    }}
+    requestAnimationFrame(animate);
+  }} else {{
+     // 이미 애니메이션을 본 후에는 결과 상태로 멈춰 있도록
+     const targetAngle = (3*Math.PI/2) - TARGET_IDX*sliceAngle - sliceAngle/2;
+     drawWheel(targetAngle);
   }}
-  requestAnimationFrame(animate);
 }} else {{
+  sessionStorage.removeItem('spin_done_' + TARGET_IDX); // 리셋 시 상태 초기화
   drawWheel(0);
 }}
 </script>
 </body>
 </html>
 """
-        # 버튼을 밖으로 뺐으므로 iframe 높이는 바퀴 크기(350)만큼만 있으면 됩니다.
         components.html(roulette_html, height=350, scrolling=False)
 
-        # 파이썬(Streamlit) 네이티브 버튼 및 결과 처리
-        if roulette_done:
+        # 애니메이션 진행 상태를 추적하기 위한 세션 변수 추가
+        if "spinning_now" not in st.session_state:
+            st.session_state.spinning_now = False
+
+        if st.session_state.spinning_now:
+            # 1. 돌아가고 있는 4초 동안 대기 화면 표시
+            with st.spinner("🌀 룰렛이 돌아가고 있습니다..."):
+                time.sleep(4) # JS 애니메이션 시간(4초)과 맞춤
+            # 2. 대기가 끝나면 멈춤 상태로 변경하고 화면 갱신
+            st.session_state.spinning_now = False
+            st.rerun()
+
+        elif roulette_done:
+            # 애니메이션 대기가 끝나고 화면이 다시 그려질 때 결과 표시
             winner = menus[winner_idx]
             result_card(winner, "🎡 룰렛 추천")
             adopt_button(winner, "🎡 룰렛", key_suffix="roulette_live")
@@ -422,10 +444,12 @@ if (IS_DONE) {{
                 st.session_state.roulette_done = False
                 st.rerun()
         else:
+            # 룰렛을 돌리기 전 초기 상태
             col1, col2, col3 = st.columns([1,2,1])
             with col2:
                 if st.button("🎡 룰렛 돌리기!", type="primary", use_container_width=True):
                     st.session_state.roulette_done = True
+                    st.session_state.spinning_now = True
                     st.session_state.roulette_winner_idx = random.randint(0, len(menus)-1)
                     st.rerun()
                 
