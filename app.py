@@ -185,8 +185,8 @@ def reset_method():
     st.session_state.roulette_done = False
     st.session_state.roulette_winner = None
     st.session_state.roulette_winner_idx = 0
-    st.session_state.dice_winner = None
     st.session_state.spinning_now = False
+    st.session_state.dice_winner = None
 
 def get_fortune():
     today = date.today().isoformat()
@@ -649,7 +649,7 @@ canvas.addEventListener('touchend', () => isDrawing = false);
 <style>
   * {{ margin:0; padding:0; box-sizing:border-box; }}
   body {{ background:transparent; display:flex; flex-direction:column; align-items:center; padding:10px; gap:0; }}
-  #scene {{ width:140px; height:140px; perspective:600px; margin-top:20px; }}
+  #scene {{ width:140px; height:140px; perspective:800px; margin-top:60px; margin-bottom:20px; }}
   #cube {{ width:100%; height:100%; position:relative; transform-style:preserve-3d; transition: none; }}
   .face {{ position:absolute; width:140px; height:140px; border-radius:18px; background:white;
     display:flex; align-items:center; justify-content:center;
@@ -707,28 +707,37 @@ function setRotation(x, y, animate) {{
 }}
 
 function rollAnimation() {{
-  const totalFrames = 30; // 약 2.5초 분량
+  const totalFrames = 35; // 조금 더 길고 역동적으로 변경
   let frame = 0;
   const sequence = [];
+  
   for (let i = 0; i < totalFrames; i++) {{
-    const speedFactor = i < 15 ? 1 : (i < 25 ? 0.6 : 0.25);
     sequence.push({{
-      x: currentX + (Math.random() - 0.5) * 180 * speedFactor,
-      y: currentY + (Math.random() - 0.5) * 180 * speedFactor,
+      x: currentX + (Math.random() - 0.5) * 360,
+      y: currentY + (Math.random() - 0.5) * 360,
+      z: (Math.random() - 0.5) * 180
     }});
   }}
+  
   const [finalX, finalY] = FACE_ROTS[FINAL_FACE];
-  const spinX = Math.round(currentX / 360) * 360 + finalX + 720;
-  const spinY = Math.round(currentY / 360) * 360 + finalY + 1080;
+  const spinX = Math.round(currentX / 360) * 360 + finalX + 1080;
+  const spinY = Math.round(currentY / 360) * 360 + finalY + 1440;
 
   function step() {{
     if (frame < sequence.length) {{
-      setRotation(sequence[frame].x, sequence[frame].y, false);
+      let progress = frame / totalFrames;
+      let jumpY = Math.sin(progress * Math.PI) * -80; // 공중으로 80px 떠오름
+      let scale = 1 + Math.sin(progress * Math.PI) * 0.4; // 1.4배 커짐
+
+      cube.style.transition = 'transform 0.06s linear';
+      cube.style.transform = `translateY(${{jumpY}}px) scale(${{scale}}) rotateX(${{sequence[frame].x}}deg) rotateY(${{sequence[frame].y}}deg) rotateZ(${{sequence[frame].z}}deg)`;
+      
       frame++;
-      setTimeout(step, frame < 15 ? 30 : frame < 25 ? 55 : 90);
+      setTimeout(step, frame < 20 ? 30 : 60);
     }} else {{
-      cube.style.transition = 'transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-      cube.style.transform = `rotateX(${{spinX}}deg) rotateY(${{spinY}}deg)`;
+      cube.style.transition = 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)'; // 바닥에 착! 떨어지는 텐션
+      cube.style.transform = `translateY(0px) scale(1) rotateX(${{spinX}}deg) rotateY(${{spinY}}deg) rotateZ(0deg)`;
+      currentX = spinX; currentY = spinY;
     }}
   }}
   step();
@@ -746,8 +755,8 @@ if (IS_SPINNING) {{
 </body>
 </html>
 """
-        # 버튼을 뺐으므로 주사위 크기 정도인 200만 있어도 충분합니다.
-        components.html(dice_html, height=200, scrolling=False)
+        # 점프하는 공간을 위해 height를 300으로 늘렸습니다.
+        components.html(dice_html, height=300, scrolling=False)
 
         if spinning_now:
             with st.spinner("🎲 주사위가 데굴데굴..."):
