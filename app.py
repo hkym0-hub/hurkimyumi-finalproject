@@ -313,21 +313,20 @@ else:
                 st.session_state._random_result = random.choice(menus)
                 st.rerun()
 
-    # ── 룰렛 (Canvas 회전 바퀴) ───────────────────────────────
+  # ── 룰렛 (Canvas 회전 바퀴) ───────────────────────────────
     elif method == "roulette":
         st.markdown("### 🎡 룰렛 바퀴")
 
-        winner_idx = random.randint(0, len(menus) - 1)
         if not st.session_state.roulette_done:
-            st.session_state.roulette_winner_idx = winner_idx
+            # 아직 안 돌렸으면 새 winner 뽑기 (버튼 누를 때 고정)
+            if st.session_state.roulette_winner is None:
+                st.session_state.roulette_winner_idx = random.randint(0, len(menus) - 1)
 
-        menu_names = [m["name"] for m in menus]
-        menu_emojis = [m.get("emoji", "🍽️") for m in menus]
-
-        names_json = json.dumps(menu_names, ensure_ascii=False)
+        menu_names  = [m["name"]            for m in menus]
+        menu_emojis = [m.get("emoji","🍽️") for m in menus]
+        names_json  = json.dumps(menu_names,  ensure_ascii=False)
         emojis_json = json.dumps(menu_emojis, ensure_ascii=False)
-        target_idx = st.session_state.roulette_winner_idx
-        already_done = "true" if st.session_state.roulette_done else "false"
+        target_idx  = st.session_state.roulette_winner_idx
 
         roulette_html = f"""
 <!DOCTYPE html>
@@ -335,33 +334,24 @@ else:
 <head>
 <meta charset="utf-8">
 <style>
-  * {{ margin:0; padding:0; box-sizing:border-box; }}
-  body {{ background:transparent; font-family:'Noto Sans KR',sans-serif; display:flex; flex-direction:column; align-items:center; padding:20px 10px; }}
-  #roulette-wrap {{ position:relative; width:340px; height:340px; }}
-  #wheel-canvas {{ border-radius:50%; box-shadow:0 8px 40px rgba(102,126,234,0.45); display:block; }}
-  #needle {{ position:absolute; top:-18px; left:50%; transform:translateX(-50%); width:0; height:0;
-    border-left:14px solid transparent; border-right:14px solid transparent;
+  *{{margin:0;padding:0;box-sizing:border-box;}}
+  body{{background:transparent;font-family:'Noto Sans KR',sans-serif;
+    display:flex;flex-direction:column;align-items:center;padding:20px 10px;}}
+  #roulette-wrap{{position:relative;width:340px;height:340px;}}
+  #wheel-canvas{{border-radius:50%;box-shadow:0 8px 40px rgba(102,126,234,0.45);display:block;}}
+  #needle{{position:absolute;top:-18px;left:50%;transform:translateX(-50%);width:0;height:0;
+    border-left:14px solid transparent;border-right:14px solid transparent;
     border-top:38px solid #f5576c;
-    filter:drop-shadow(0 4px 8px rgba(245,87,108,0.6));
-    z-index:10; }}
-  #center-dot {{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-    width:28px; height:28px; background:white; border-radius:50%;
-    box-shadow:0 2px 10px rgba(0,0,0,0.2); z-index:10; }}
-  #spin-btn {{ margin-top:24px; padding:14px 56px; font-size:1.1rem; font-weight:800;
-    background:linear-gradient(135deg,#667eea,#764ba2); color:white; border:none;
-    border-radius:999px; cursor:pointer; box-shadow:0 6px 24px rgba(102,126,234,0.4);
-    transition:transform .15s, box-shadow .15s; font-family:'Noto Sans KR',sans-serif; }}
-  #spin-btn:hover {{ transform:translateY(-2px); box-shadow:0 10px 32px rgba(102,126,234,0.55); }}
-  #spin-btn:disabled {{ opacity:0.5; cursor:not-allowed; transform:none; }}
-  #result-box {{ margin-top:20px; padding:16px 32px; background:linear-gradient(135deg,#667eea,#764ba2);
-    border-radius:16px; color:white; text-align:center; display:none; animation:fadeUp .5s ease; }}
-  #result-box .r-emoji {{ font-size:2.4rem; }}
-  #result-box .r-name {{ font-size:1.4rem; font-weight:900; margin-top:6px; }}
-  @keyframes fadeUp {{ from {{ opacity:0; transform:translateY(16px); }} to {{ opacity:1; transform:translateY(0); }} }}
-  #send-btn {{ margin-top:12px; padding:10px 32px; font-size:.95rem; font-weight:700;
-    background:rgba(255,255,255,0.25); color:white; border:2px solid rgba(255,255,255,0.5);
-    border-radius:999px; cursor:pointer; font-family:'Noto Sans KR',sans-serif; }}
-  #send-btn:hover {{ background:rgba(255,255,255,0.4); }}
+    filter:drop-shadow(0 4px 8px rgba(245,87,108,0.6));z-index:10;}}
+  #center-dot{{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:28px;height:28px;background:white;border-radius:50%;
+    box-shadow:0 2px 10px rgba(0,0,0,0.2);z-index:10;}}
+  #spin-btn{{margin-top:24px;padding:14px 56px;font-size:1.1rem;font-weight:800;
+    background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;
+    border-radius:999px;cursor:pointer;box-shadow:0 6px 24px rgba(102,126,234,0.4);
+    font-family:'Noto Sans KR',sans-serif;transition:transform .15s,box-shadow .15s;}}
+  #spin-btn:hover{{transform:translateY(-2px);box-shadow:0 10px 32px rgba(102,126,234,0.55);}}
+  #spin-btn:disabled{{opacity:0.5;cursor:not-allowed;transform:none;}}
 </style>
 </head>
 <body>
@@ -371,153 +361,86 @@ else:
   <div id="center-dot"></div>
 </div>
 <button id="spin-btn">🎡 룰렛 돌리기!</button>
-<div id="result-box">
-  <div class="r-emoji" id="r-emoji"></div>
-  <div class="r-name" id="r-name"></div>
-  <button id="send-btn">✅ 이 메뉴로 결정!</button>
-</div>
 
 <script>
-const NAMES = {names_json};
-const EMOJIS = {emojis_json};
+const NAMES      = {names_json};
+const EMOJIS     = {emojis_json};
 const TARGET_IDX = {target_idx};
-const ALREADY_DONE = {already_done};
 const N = NAMES.length;
 const COLORS = [
   '#667eea','#764ba2','#f093fb','#f5576c','#4facfe','#00f2fe',
   '#43e97b','#38f9d7','#fa709a','#fee140','#a18cd1','#fbc2eb',
   '#a1c4fd','#c2e9fb','#fd746c','#ff9a9e','#ffecd2','#fcb69f'
 ];
-
-const canvas = document.getElementById('wheel-canvas');
-const ctx = canvas.getContext('2d');
-const spinBtn = document.getElementById('spin-btn');
-const resultBox = document.getElementById('result-box');
-const rEmoji = document.getElementById('r-emoji');
-const rName = document.getElementById('r-name');
-const sendBtn = document.getElementById('send-btn');
-
+const canvas   = document.getElementById('wheel-canvas');
+const ctx      = canvas.getContext('2d');
+const spinBtn  = document.getElementById('spin-btn');
 const sliceAngle = (2 * Math.PI) / N;
 let currentAngle = 0;
 let spinning = false;
-let finalAngle = 0;
 
 function drawWheel(angle) {{
-  ctx.clearRect(0, 0, 340, 340);
-  const cx = 170, cy = 170, r = 165;
-  for (let i = 0; i < N; i++) {{
-    const start = angle + i * sliceAngle;
-    const end = start + sliceAngle;
-    // slice
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, r, start, end);
-    ctx.closePath();
-    ctx.fillStyle = COLORS[i % COLORS.length];
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    // text
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(start + sliceAngle / 2);
-    ctx.textAlign = 'right';
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 13px "Noto Sans KR", sans-serif';
-    ctx.shadowColor = 'rgba(0,0,0,0.4)';
-    ctx.shadowBlur = 4;
-    const label = EMOJIS[i] + ' ' + (NAMES[i].length > 6 ? NAMES[i].slice(0,6)+'…' : NAMES[i]);
-    ctx.fillText(label, r - 12, 5);
-    ctx.restore();
+  ctx.clearRect(0,0,340,340);
+  const cx=170,cy=170,r=165;
+  for(let i=0;i<N;i++){{
+    const start=angle+i*sliceAngle, end=start+sliceAngle;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,end); ctx.closePath();
+    ctx.fillStyle=COLORS[i%COLORS.length]; ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=2; ctx.stroke();
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(start+sliceAngle/2);
+    ctx.textAlign='right'; ctx.fillStyle='white';
+    ctx.font='bold 13px "Noto Sans KR",sans-serif';
+    ctx.shadowColor='rgba(0,0,0,0.4)'; ctx.shadowBlur=4;
+    const label=EMOJIS[i]+' '+(NAMES[i].length>6?NAMES[i].slice(0,6)+'…':NAMES[i]);
+    ctx.fillText(label,r-12,5); ctx.restore();
   }}
-  // outer ring
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, 2*Math.PI);
-  ctx.strokeStyle = 'rgba(255,255,255,0.8)';
-  ctx.lineWidth = 4;
-  ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,2*Math.PI);
+  ctx.strokeStyle='rgba(255,255,255,0.8)'; ctx.lineWidth=4; ctx.stroke();
 }}
 
 drawWheel(0);
 
-// The needle points DOWN from top = angle 3π/2 = 270°
-// So the winning slice center should be at 3π/2
-// slice i center angle (from wheel's 0) = i * sliceAngle + sliceAngle/2
-// We want: currentAngle + i*sliceAngle + sliceAngle/2 = 3π/2  (mod 2π)
-// => currentAngle = 3π/2 - i*sliceAngle - sliceAngle/2
+spinBtn.onclick = function(){{
+  if(spinning) return;
+  spinning=true; spinBtn.disabled=true; spinBtn.textContent='🌀 돌아가는 중...';
 
-function spin() {{
-  if (spinning) return;
-  spinning = true;
-  spinBtn.disabled = true;
+  const targetAngle=(3*Math.PI/2)-TARGET_IDX*sliceAngle-sliceAngle/2;
+  const extraSpins=(6+Math.floor(Math.random()*3))*2*Math.PI;
+  const finalAngle=targetAngle+extraSpins;
+  const duration=4500;
+  const startTime=performance.now();
+  const startAngle=currentAngle;
 
-  const targetAngle = (3 * Math.PI / 2) - TARGET_IDX * sliceAngle - sliceAngle / 2;
-  const extraSpins = (5 + Math.floor(Math.random() * 4)) * 2 * Math.PI;
-  finalAngle = targetAngle + extraSpins;
-
-  const duration = 4500;
-  const start = performance.now();
-  const startAngle = currentAngle;
-
-  function easeOut(t) {{
-    return 1 - Math.pow(1 - t, 4);
-  }}
-
-  function animate(now) {{
-    const elapsed = now - start;
-    const t = Math.min(elapsed / duration, 1);
-    currentAngle = startAngle + (finalAngle - startAngle) * easeOut(t);
+  function easeOut(t){{ return 1-Math.pow(1-t,4); }}
+  function animate(now){{
+    const t=Math.min((now-startTime)/duration,1);
+    currentAngle=startAngle+(finalAngle-startAngle)*easeOut(t);
     drawWheel(currentAngle);
-    if (t < 1) {{
-      requestAnimationFrame(animate);
-    }} else {{
-      spinning = false;
-      currentAngle = finalAngle % (2 * Math.PI);
-      showResult();
+    if(t<1){{ requestAnimationFrame(animate); }}
+    else{{
+      spinning=false;
+      currentAngle=finalAngle%(2*Math.PI);
+      // 완료 신호 → Streamlit에 전달
+      window.parent.postMessage({{type:'streamlit:setComponentValue',value:'done:'+TARGET_IDX}},'*');
     }}
   }}
   requestAnimationFrame(animate);
-}}
-
-function showResult() {{
-  rEmoji.textContent = EMOJIS[TARGET_IDX];
-  rName.textContent = NAMES[TARGET_IDX];
-  resultBox.style.display = 'block';
-}}
-
-if (ALREADY_DONE) {{
-  // restore to final position and show result
-  const targetAngle = (3 * Math.PI / 2) - TARGET_IDX * sliceAngle - sliceAngle / 2;
-  currentAngle = targetAngle % (2 * Math.PI);
-  drawWheel(currentAngle);
-  showResult();
-  spinBtn.textContent = '🔄 다시 돌리기';
-  spinBtn.disabled = false;
-  spinBtn.onclick = function() {{
-    resultBox.style.display = 'none';
-    window.parent.postMessage({{type:'streamlit:setComponentValue', value: 'respin'}}, '*');
-  }};
-}} else {{
-  spinBtn.onclick = function() {{
-    spin();
-    spinBtn.textContent = '🔄 다시 돌리기';
-    window.parent.postMessage({{type:'streamlit:setComponentValue', value: 'spinning:' + TARGET_IDX}}, '*');
-  }};
-}}
-
-sendBtn.onclick = function() {{
-  window.parent.postMessage({{type:'streamlit:setComponentValue', value: 'adopt:' + TARGET_IDX}}, '*');
 }};
 </script>
 </body>
 </html>
 """
+        comp_val = components.html(roulette_html, height=460, scrolling=False)
 
-        result = components.html(roulette_html, height=520, scrolling=False)
+        st.markdown("<div style='height:.5rem'></div>", unsafe_allow_html=True)
 
         if not st.session_state.roulette_done:
-            st.info("💡 룰렛 바퀴를 돌려서 오늘의 메뉴를 결정하세요!")
+            st.info("💡 룰렛 바퀴를 돌리면 결과가 아래에 표시됩니다!")
+            # postMessage를 받지 못하는 경우를 위한 수동 완료 버튼
+            if st.button("✅ 룰렛 완료 (결과 확인)", key="roulette_confirm", use_container_width=True):
+                st.session_state.roulette_winner = menus[st.session_state.roulette_winner_idx]
+                st.session_state.roulette_done = True
+                st.rerun()
         else:
             winner = st.session_state.roulette_winner
             st.balloons()
@@ -528,7 +451,6 @@ sendBtn.onclick = function() {{
                 st.session_state.roulette_winner = None
                 st.session_state.roulette_winner_idx = random.randint(0, len(menus)-1)
                 st.rerun()
-
     # ── 스크래치 (Canvas 진짜 긁기) ─────────────────────────────
     elif method == "scratch":
         st.markdown("### 🎁 스크래치 복권")
