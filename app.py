@@ -314,6 +314,7 @@ else:
                 st.rerun()
 
 # ── 룰렛 (Canvas 회전 바퀴) ───────────────────────────────
+   # ── 룰렛 (Canvas 회전 바퀴) ───────────────────────────────
     elif method == "roulette":
         st.markdown("### 🎡 룰렛 바퀴")
 
@@ -491,7 +492,8 @@ respinBtn.onclick = function(){{
 </body>
 </html>
 """
-        result = components.html(roulette_html, height=620, scrolling=False)
+        # height를 620에서 750으로 늘려 결과 카드가 잘리지 않도록 수정
+        result = components.html(roulette_html, height=750, scrolling=False)
 
         # postMessage로 채택 신호 수신
         if result and isinstance(result, str) and result.startswith("adopt:"):
