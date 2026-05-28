@@ -453,7 +453,7 @@ if (IS_DONE) {{
                     st.session_state.roulette_winner_idx = random.randint(0, len(menus)-1)
                     st.rerun()
                 
-    # ── 스크래치 (Canvas 진짜 긁기) ─────────────────────────────
+  # ── 스크래치 (Canvas 진짜 긁기) ─────────────────────────────
     elif method == "scratch":
         st.markdown("### 🎁 스크래치 복권")
 
@@ -487,14 +487,6 @@ if (IS_DONE) {{
   #pct-bar {{ height:10px; background:linear-gradient(90deg,#667eea,#f5576c); border-radius:999px; width:0%; transition:width .1s; }}
   #done-msg {{ margin-top:14px; font-size:1rem; font-weight:800; color:#667eea; display:none; animation:pop .4s cubic-bezier(.175,.885,.32,1.275); }}
   @keyframes pop {{ from {{ transform:scale(0.5); opacity:0; }} to {{ transform:scale(1); opacity:1; }} }}
-  #adopt-btn {{ margin-top:14px; padding:12px 44px; font-size:1rem; font-weight:800;
-    background:linear-gradient(135deg,#667eea,#764ba2); color:white; border:none;
-    border-radius:999px; cursor:pointer; display:none; font-family:'Noto Sans KR',sans-serif;
-    box-shadow:0 6px 20px rgba(102,126,234,0.4); animation:pop .4s .1s both cubic-bezier(.175,.885,.32,1.275); }}
-  #adopt-btn:hover {{ filter:brightness(1.1); }}
-  #retry-btn {{ margin-top:8px; padding:8px 28px; font-size:.9rem; font-weight:700;
-    background:white; color:#667eea; border:2px solid #667eea;
-    border-radius:999px; cursor:pointer; display:none; font-family:'Noto Sans KR',sans-serif; }}
 </style>
 </head>
 <body>
@@ -508,9 +500,7 @@ if (IS_DONE) {{
 </div>
 <div id="hint">🖱️ 마우스 또는 손가락으로 긁어보세요!</div>
 <div id="pct-bar-wrap"><div id="pct-bar"></div></div>
-<div id="done-msg">🎉 완전히 긁었어요!</div>
-<button id="adopt-btn">✅ {menu_name} (으)로 결정!</button>
-<button id="retry-btn">🔄 다시 뽑기</button>
+<div id="done-msg">🎉 완전히 긁었어요! 아래 버튼을 눌러 결정하세요!</div>
 
 <script>
 const canvas = document.getElementById('scratch-canvas');
@@ -567,7 +557,7 @@ function scratch(e) {{
   e.preventDefault();
   const pos = getPos(e);
   ctx.beginPath();
-  ctx.arc(pos.x, pos.y, 28, 0, Math.PI*2);
+  ctx.arc(pos.x, pos.y, 32, 0, Math.PI*2); // 브러쉬 크기를 살짝 키웠습니다.
   ctx.fill();
   checkProgress();
 }}
@@ -581,14 +571,12 @@ function checkProgress() {{
   scratchedPct = Math.min((transparent / totalPixels) * 100, 100);
   document.getElementById('pct-bar').style.width = scratchedPct + '%';
 
-  if (scratchedPct > 60 && !revealed) {{
+  if (scratchedPct > 55 && !revealed) {{ // 55% 정도만 긁어도 전체가 보이게 개선
     revealed = true;
     // Clear all
     ctx.clearRect(0, 0, W, H);
     document.getElementById('hint').style.display = 'none';
     document.getElementById('done-msg').style.display = 'block';
-    document.getElementById('adopt-btn').style.display = 'inline-block';
-    document.getElementById('retry-btn').style.display = 'inline-block';
   }}
 }}
 
@@ -599,34 +587,24 @@ canvas.addEventListener('mouseleave', () => isDrawing = false);
 canvas.addEventListener('touchstart', e => {{ isDrawing = true; scratch(e); }}, {{passive:false}});
 canvas.addEventListener('touchmove', scratch, {{passive:false}});
 canvas.addEventListener('touchend', () => isDrawing = false);
-
-document.getElementById('adopt-btn').onclick = function() {{
-  window.parent.postMessage({{type:'streamlit:setComponentValue', value: 'adopt'}}, '*');
-}};
-document.getElementById('retry-btn').onclick = function() {{
-  window.parent.postMessage({{type:'streamlit:setComponentValue', value: 'retry'}}, '*');
-}};
 </script>
 </body>
 </html>
 """
+        # HTML 버튼을 삭제했으므로 높이를 320으로 줄여 빈 공간을 제거합니다.
+        components.html(scratch_html, height=320, scrolling=False)
 
-        comp_result = components.html(scratch_html, height=400, scrolling=False)
-
-        st.markdown("<div style='height:.5rem'></div>", unsafe_allow_html=True)
-
-        col1, col2 = st.columns(2)
-        with col1:
+        # 파이썬(Streamlit) 네이티브 진짜 버튼 (중앙 정렬)
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
             if st.button("✅ 이 메뉴로 결정!", key="scratch_adopt", type="primary", use_container_width=True):
                 add_history(menu, "🎁 스크래치")
                 st.success(f"🎉 **{menu['name']}** 이(가) 오늘의 메뉴로 기록됐어요!")
                 reset_method()
                 st.rerun()
-        with col2:
             if st.button("🔄 다시 뽑기", key="scratch_retry", use_container_width=True):
                 st.session_state.scratch_menu = random.choice(menus)
                 st.rerun()
-
     # ── 월드컵 ───────────────────────────────────────────────
     elif method == "worldcup":
         ts = st.session_state.tournament_state
