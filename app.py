@@ -94,7 +94,7 @@ def init():
         "fortune_today": None, "fortune_date": None,
         "tarot_cards": None, "tarot_chosen": None,
         "filter_cal_min": 0, "filter_cal_max": 1200,
-        "filter_food_type": "전체", "filter_delivery": "전체", "filter_budget": "전체",
+        "filter_food_type": "전체", "filter_budget": "전체",
         "roulette_done": False, "roulette_winner": None,
         "roulette_winner_idx": 0,
         "spinning_now": False,
@@ -129,10 +129,6 @@ def apply_filters(menus):
     result = menus
     if st.session_state.filter_food_type != "전체":
         result = [m for m in result if m.get("food_type") == st.session_state.filter_food_type]
-    if st.session_state.filter_delivery == "배달만":
-        result = [m for m in result if m.get("delivery", False)]
-    elif st.session_state.filter_delivery == "직접만":
-        result = [m for m in result if not m.get("delivery", False)]
     if st.session_state.filter_budget != "전체":
         result = [m for m in result if m.get("budget") == st.session_state.filter_budget]
     result = [m for m in result if st.session_state.filter_cal_min <= m.get("cal", 0) <= st.session_state.filter_cal_max]
@@ -226,7 +222,7 @@ for i, cat in enumerate(CATEGORIES):
 
 # ── 조건 필터 바 ─────────────────────────────────────────────
 with st.expander("🔍 조건 필터", expanded=False):
-    fc1, fc2, fc3, fc4 = st.columns(4)
+    fc1, fc2, fc3 = st.columns(3)
     with fc1:
         cal_range = st.slider("🔥 칼로리 범위 (kcal)", 0, 1200,
                              (st.session_state.filter_cal_min, st.session_state.filter_cal_max), 50)
@@ -236,12 +232,7 @@ with st.expander("🔍 조건 필터", expanded=False):
                           index=["전체","밥","면","고기","기타"].index(st.session_state.filter_food_type))
         st.session_state.filter_food_type = ft
     with fc3:
-        dv = st.selectbox("🛵 조리 / 배달", ["전체","배달만","직접만"],
-                          index=["전체","배달만","직접만"].index(st.session_state.filter_delivery))
-        st.session_state.filter_delivery = dv
-    with fc4:
-        # 예산 선택지에 구체적인 금액 기준 추가
-        bd = st.selectbox("💰 예산 (저: 1만원 미만, 중: 1~3만원, 고: 3만원 이상)", ["전체","저","중","고"],
+        bd = st.selectbox("💰 예산 (저: 만 오천원 이하, 중: 만 오천원 ~ 3만원, 고: 3만원 이상)", ["전체","저","중","고"],
                           index=["전체","저","중","고"].index(st.session_state.filter_budget))
         st.session_state.filter_budget = bd
 
@@ -251,7 +242,7 @@ with st.expander("🔍 조건 필터", expanded=False):
         st.info(f"필터 적용 중: {total_count}개 → **{filtered_count}개** 메뉴 (필터 결과가 0개면 전체 표시)")
     if st.button("🔄 필터 초기화"):
         st.session_state.filter_cal_min = 0; st.session_state.filter_cal_max = 1200
-        st.session_state.filter_food_type = "전체"; st.session_state.filter_delivery = "전체"
+        st.session_state.filter_food_type = "전체"
         st.session_state.filter_budget = "전체"; st.rerun()
 
 st.markdown("<div style='height:.3rem'></div>", unsafe_allow_html=True)
@@ -1078,7 +1069,7 @@ with tab_mgmt:
         nc = st.number_input("칼로리 (kcal)", 0, 3000, 500, 50, key="add_cal")
         ne = st.text_input("이모지", "🍽️", max_chars=2, key="add_emoji")
         nft = st.selectbox("음식 종류", ["밥","면","고기","기타"], key="add_ft")
-        nbd = st.selectbox("예산 (저: 1만원 미만, 중: 1~3만원, 고: 3만원 이상)", ["저","중","고"], key="add_bd")
+        nbd = st.selectbox("예산 (저: 만 오천원 이하, 중: 만 오천원 ~ 3만원, 고: 3만원 이상)", ["저","중","고"], key="add_bd")
         ndv = st.checkbox("배달 가능", key="add_dv")
         if st.button("추가", type="primary"):
             if nm.strip():
