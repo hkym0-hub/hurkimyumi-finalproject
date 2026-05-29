@@ -32,7 +32,7 @@ def save_data():
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-# ── 데이터 (이 부분이 가장 먼저 와야 에러가 안 납니다!) ──────────────
+# ── 데이터 ────────────────────────────────────────────────────
 CATEGORY_EMOJI = {
     "저녁 메뉴":"🌙","배달 메뉴":"🛵","데이트 메뉴":"💑","다이어트 메뉴":"🥗",
     "가성비 메뉴":"💰","캠핑 메뉴":"⛺","매운 메뉴":"🌶️","파티 메뉴":"🎉",
@@ -110,7 +110,14 @@ init()
 # ── 사이드바 (다크 모드 설정) ──────────────────────────────────────
 with st.sidebar:
     st.markdown("### ⚙️ 앱 설정")
-    is_dark = st.toggle("🌙 다크 모드 켜기", value=st.session_state.dark_mode)
+    # 슬라이더 형태의 버튼으로 다크모드 ON/OFF
+    theme_slider = st.select_slider(
+        "테마 설정",
+        options=["☀️ Light", "🌙 Dark"],
+        value="🌙 Dark" if st.session_state.dark_mode else "☀️ Light"
+    )
+    is_dark = (theme_slider == "🌙 Dark")
+    
     if is_dark != st.session_state.dark_mode:
         st.session_state.dark_mode = is_dark
         save_data()
