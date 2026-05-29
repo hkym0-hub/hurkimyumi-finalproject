@@ -69,7 +69,7 @@ FORTUNES = [
     ("누군가와 함께하고 싶은 날 🤝", "여럿이 나눠 먹기 좋은 메뉴로!"),
 ]
 
-# ── 세션 초기화 (이제 데이터가 위에 있어서 에러가 안 납니다!) ────
+# ── 세션 초기화 ───────────────────────────────────────────────
 def init():
     saved_data = load_data()
     defaults = {
@@ -106,22 +106,6 @@ def init():
     if st.session_state.active_cat not in MENU_DATA:
         st.session_state.active_cat = "저녁 메뉴"
 init()
-
-# ── 사이드바 (다크 모드 설정) ──────────────────────────────────────
-with st.sidebar:
-    st.markdown("### ⚙️ 앱 설정")
-    # 슬라이더 형태의 버튼으로 다크모드 ON/OFF
-    theme_slider = st.select_slider(
-        "테마 설정",
-        options=["☀️ Light", "🌙 Dark"],
-        value="🌙 Dark" if st.session_state.dark_mode else "☀️ Light"
-    )
-    is_dark = (theme_slider == "🌙 Dark")
-    
-    if is_dark != st.session_state.dark_mode:
-        st.session_state.dark_mode = is_dark
-        save_data()
-        st.rerun()
 
 # ── CSS 스타일 (다크 모드 조건부 렌더링) ───────────────────────────
 css_base = """
@@ -252,8 +236,22 @@ def get_fortune():
         random.seed()
     return st.session_state.fortune_today
 
-# ── 제목 ─────────────────────────────────────────────────────
-st.markdown('<div class="title-pill-wrap"><div class="title-pill">🍽️ 오늘의 추천 메뉴</div></div>', unsafe_allow_html=True)
+# ── 제목 및 다크모드 설정 ───────────────────────────────────────────
+c1, c2, c3 = st.columns([1, 2, 1])
+with c2:
+    st.markdown('<div class="title-pill-wrap"><div class="title-pill">🍽️ 오늘의 추천 메뉴</div></div>', unsafe_allow_html=True)
+with c3:
+    theme_slider = st.select_slider(
+        "테마 설정",
+        options=["☀️ Light", "🌙 Dark"],
+        value="🌙 Dark" if st.session_state.dark_mode else "☀️ Light",
+        label_visibility="collapsed"
+    )
+    is_dark = (theme_slider == "🌙 Dark")
+    if is_dark != st.session_state.dark_mode:
+        st.session_state.dark_mode = is_dark
+        save_data()
+        st.rerun()
 
 # ── 오늘의 운세 배너 ─────────────────────────────────────────
 fortune_msg, fortune_tip = get_fortune()
