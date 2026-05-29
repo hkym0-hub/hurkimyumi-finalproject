@@ -107,7 +107,7 @@ def init():
         st.session_state.active_cat = "저녁 메뉴"
 init()
 
-# ── CSS 스타일 (다크 모드 조건부 렌더링) ───────────────────────────
+# ── CSS 스타일 ───────────────────────────
 css_base = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;900&display=swap');
@@ -145,12 +145,18 @@ hr{border-color:#ddd!important;}
 
 css_dark_overrides = """
 .stApp { background: #121212 !important; }
-.method-card, .hist-item, .rank-card, .info-card, .wc-option { background: #1e1e1e !important; color: #eee !important; border: 1px solid #333 !important; }
-.method-card-title, .result-name, .wc-name, b, .stMarkdown p, label, .stMetric, [data-testid="stMetricLabel"], [data-testid="stMetricValue"] { color: #eee !important; }
+.method-card, .hist-item, .rank-card, .info-card, .wc-option, .stExpander { background: #1e1e1e !important; color: #eee !important; border: 1px solid #333 !important; }
+.method-card-title, .result-name, .wc-name, b, strong, label, .stMetric, [data-testid="stMetricLabel"], [data-testid="stMetricValue"] { color: #eee !important; }
+h1, h2, h3, h4, h5, h6, .stMarkdown p, .stMarkdown div { color: #eee !important; }
 .method-card-desc, .wc-cal { color: #aaa !important; }
 .cal-bar-wrap { background: #333 !important; }
 .hist-item, .rank-card, .info-card { box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important; }
 .wc-option:hover { background: #2a2a35 !important; border-color: #667eea !important; }
+.stButton>button[kind="secondary"] { color: #eee !important; border-color: #555 !important; background: rgba(255,255,255,0.05) !important; }
+
+/* 인라인 색상 강제 변환 */
+[style*="color:#111"], [style*="color:#1a1a2e"], [style*="color:#333"],
+[style*="color: #111"], [style*="color: #1a1a2e"], [style*="color: #333"] { color: #eee !important; }
 """
 
 if st.session_state.dark_mode:
@@ -158,6 +164,23 @@ if st.session_state.dark_mode:
 else:
     st.markdown(f"{css_base} \n </style>", unsafe_allow_html=True)
 
+
+# ── 제목 및 다크모드 설정 ───────────────────────────────────────────
+c1, c2, c3 = st.columns([1, 2, 1])
+with c2:
+    st.markdown('<div class="title-pill-wrap"><div class="title-pill">🍽️ 오늘의 추천 메뉴</div></div>', unsafe_allow_html=True)
+with c3:
+    theme_slider = st.select_slider(
+        "테마 설정",
+        options=["☀️ Light", "🌙 Dark"],
+        value="🌙 Dark" if st.session_state.dark_mode else "☀️ Light",
+        label_visibility="collapsed"
+    )
+    is_dark = (theme_slider == "🌙 Dark")
+    if is_dark != st.session_state.dark_mode:
+        st.session_state.dark_mode = is_dark
+        save_data()
+        st.rerun()
 
 # ── 헬퍼 ─────────────────────────────────────────────────────
 def get_all_menus():
@@ -235,23 +258,6 @@ def get_fortune():
         st.session_state.fortune_date  = today
         random.seed()
     return st.session_state.fortune_today
-
-# ── 제목 및 다크모드 설정 ───────────────────────────────────────────
-c1, c2, c3 = st.columns([1, 2, 1])
-with c2:
-    st.markdown('<div class="title-pill-wrap"><div class="title-pill">🍽️ 오늘의 추천 메뉴</div></div>', unsafe_allow_html=True)
-with c3:
-    theme_slider = st.select_slider(
-        "테마 설정",
-        options=["☀️ Light", "🌙 Dark"],
-        value="🌙 Dark" if st.session_state.dark_mode else "☀️ Light",
-        label_visibility="collapsed"
-    )
-    is_dark = (theme_slider == "🌙 Dark")
-    if is_dark != st.session_state.dark_mode:
-        st.session_state.dark_mode = is_dark
-        save_data()
-        st.rerun()
 
 # ── 오늘의 운세 배너 ─────────────────────────────────────────
 fortune_msg, fortune_tip = get_fortune()
