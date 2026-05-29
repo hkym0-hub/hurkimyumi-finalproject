@@ -94,7 +94,7 @@ def init():
         "fortune_today": None, "fortune_date": None,
         "tarot_cards": None, "tarot_chosen": None,
         "filter_cal_min": 0, "filter_cal_max": 1200,
-        "filter_food_type": "전체", "filter_delivery": "전체", "filter_budget": "전체",
+        "filter_food_type": "전체", "filter_budget": "전체",
         "roulette_done": False, "roulette_winner": None,
         "roulette_winner_idx": 0,
         "spinning_now": False,
@@ -129,10 +129,6 @@ def apply_filters(menus):
     result = menus
     if st.session_state.filter_food_type != "전체":
         result = [m for m in result if m.get("food_type") == st.session_state.filter_food_type]
-    if st.session_state.filter_delivery == "배달만":
-        result = [m for m in result if m.get("delivery", False)]
-    elif st.session_state.filter_delivery == "직접만":
-        result = [m for m in result if not m.get("delivery", False)]
     if st.session_state.filter_budget != "전체":
         result = [m for m in result if m.get("budget") == st.session_state.filter_budget]
     result = [m for m in result if st.session_state.filter_cal_min <= m.get("cal", 0) <= st.session_state.filter_cal_max]
@@ -226,7 +222,7 @@ for i, cat in enumerate(CATEGORIES):
 
 # ── 조건 필터 바 ─────────────────────────────────────────────
 with st.expander("🔍 조건 필터", expanded=False):
-    fc1, fc2, fc3, fc4 = st.columns(4)
+    fc1, fc2, fc3 = st.columns(3)
     with fc1:
         cal_range = st.slider("🔥 칼로리 범위 (kcal)", 0, 1200,
                              (st.session_state.filter_cal_min, st.session_state.filter_cal_max), 50)
@@ -236,10 +232,6 @@ with st.expander("🔍 조건 필터", expanded=False):
                           index=["전체","밥","면","고기","기타"].index(st.session_state.filter_food_type))
         st.session_state.filter_food_type = ft
     with fc3:
-        dv = st.selectbox("🛵 조리 / 배달", ["전체","배달만","직접만"],
-                          index=["전체","배달만","직접만"].index(st.session_state.filter_delivery))
-        st.session_state.filter_delivery = dv
-    with fc4:
         bd = st.selectbox("💰 예산", ["전체","저","중","고"],
                           index=["전체","저","중","고"].index(st.session_state.filter_budget))
         st.session_state.filter_budget = bd
@@ -250,7 +242,7 @@ with st.expander("🔍 조건 필터", expanded=False):
         st.info(f"필터 적용 중: {total_count}개 → **{filtered_count}개** 메뉴 (필터 결과가 0개면 전체 표시)")
     if st.button("🔄 필터 초기화"):
         st.session_state.filter_cal_min = 0; st.session_state.filter_cal_max = 1200
-        st.session_state.filter_food_type = "전체"; st.session_state.filter_delivery = "전체"
+        st.session_state.filter_food_type = "전체"
         st.session_state.filter_budget = "전체"; st.rerun()
 
 st.markdown("<div style='height:.3rem'></div>", unsafe_allow_html=True)
@@ -647,93 +639,105 @@ canvas.addEventListener('touchend', () => isDrawing = false);
 <meta charset="utf-8">
 <style>
   * {{ margin:0; padding:0; box-sizing:border-box; }}
-  body {{ background:transparent; display:flex; justify-content:center; padding:20px; }}
-  #dice-wrap {{ position:relative; width:100px; height:100px; }}
+  body {{ background:transparent; display:flex; justify-content:center; align-items:center; padding:20px; }}
   
-  .face {{
-    position:absolute; top:0; left:0; width:100%; height:100%;
-    background:white; border-radius:16px;
-    box-shadow: inset 0 0 0 3px rgba(0,0,0,0.05), 0 4px 15px rgba(0,0,0,0.1);
-    opacity:0; transition:opacity 0.12s ease-in-out;
+  #dice-container {{
+    position: relative;
+    width: 100px;
+    height: 100px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: inset 0 0 0 3px rgba(0,0,0,0.05), 0 8px 25px rgba(102,126,234,0.3);
+    overflow: hidden;
   }}
-  .face.active {{ opacity:1; z-index:10; }}
-  .face.final-pop {{
-    animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+
+  .face-layer {{
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.08s ease-in-out;
+    display: grid;
+    padding: 16px;
   }}
+  .face-layer.active {{ opacity: 1; }}
+
+  .dot {{ width: 16px; height: 16px; border-radius: 50%; background: #1a1a2e; }}
+
+  /* Grid Layouts for each face */
+  .f1 {{ grid-template-columns: 1fr; grid-template-rows: 1fr; place-items: center; }}
   
-  @keyframes pop {{
-    0% {{ transform:scale(1); }}
-    50% {{ transform:scale(1.15); box-shadow: inset 0 0 0 3px rgba(0,0,0,0.05), 0 10px 25px rgba(102,126,234,0.3); }}
-    100% {{ transform:scale(1); }}
-  }}
-  
-  .dot {{ position:absolute; width:16px; height:16px; border-radius:50%; background:#1a1a2e; }}
-  
-  /* Dot positions */
-  .c {{ top:50%; left:50%; transform:translate(-50%, -50%); }}
-  .tl {{ top:16px; left:16px; }}
-  .tr {{ top:16px; right:16px; }}
-  .bl {{ bottom:16px; left:16px; }}
-  .br {{ bottom:16px; right:16px; }}
-  .ml {{ top:50%; left:16px; transform:translateY(-50%); }}
-  .mr {{ top:50%; right:16px; transform:translateY(-50%); }}
+  .f2 {{ grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }}
+  .f2 .d1 {{ grid-column: 1; grid-row: 1; align-self: start; justify-self: start; }}
+  .f2 .d2 {{ grid-column: 2; grid-row: 2; align-self: end; justify-self: end; }}
+
+  .f3 {{ grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }}
+  .f3 .d1 {{ grid-column: 1; grid-row: 1; align-self: start; justify-self: start; }}
+  .f3 .d2 {{ grid-column: 2; grid-row: 2; align-self: center; justify-self: end; }}
+  .f3 .d3 {{ grid-column: 1; grid-row: 3; align-self: end; justify-self: start; }}
+
+  .f4 {{ grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 8px; place-items: center; }}
+
+  .f5 {{ grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; gap: 4px; place-items: center; }}
+  .f5 .d5 {{ grid-column: 1 / 3; grid-row: 2; }}
+
+  .f6 {{ grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; gap: 4px; place-items: center; }}
 </style>
 </head>
 <body>
-<div id="dice-wrap">
-  <div class="face" id="f1"><div class="dot c"></div></div>
-  <div class="face" id="f2"><div class="dot tl"></div><div class="dot br"></div></div>
-  <div class="face" id="f3"><div class="dot tl"></div><div class="dot c"></div><div class="dot br"></div></div>
-  <div class="face" id="f4"><div class="dot tl"></div><div class="dot tr"></div><div class="dot bl"></div><div class="dot br"></div></div>
-  <div class="face" id="f5"><div class="dot tl"></div><div class="dot tr"></div><div class="dot c"></div><div class="dot bl"></div><div class="dot br"></div></div>
-  <div class="face" id="f6"><div class="dot tl"></div><div class="dot tr"></div><div class="dot ml"></div><div class="dot mr"></div><div class="dot bl"></div><div class="dot br"></div></div>
+
+<div id="dice-container">
+  <div class="face-layer f1" id="f1"><div class="dot"></div></div>
+  <div class="face-layer f2" id="f2"><div class="dot d1"></div><div class="dot d2"></div></div>
+  <div class="face-layer f3" id="f3"><div class="dot d1"></div><div class="dot d2"></div><div class="dot d3"></div></div>
+  <div class="face-layer f4" id="f4"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+  <div class="face-layer f5" id="f5"><div class="dot"></div><div class="dot"></div><div class="dot d5"></div><div class="dot"></div><div class="dot"></div></div>
+  <div class="face-layer f6" id="f6"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
 </div>
 
 <script>
 const FINAL_FACE = {dice_face};
 const IS_SPINNING = {"true" if spinning_now else "false"};
 const ALREADY_DONE = {"true" if dice_done else "false"};
-const faces = document.querySelectorAll('.face');
+const faces = document.querySelectorAll('.face-layer');
 
-function showFace(n, finalPop = false) {{
-  faces.forEach(f => {{
-      f.classList.remove('active');
-      f.classList.remove('final-pop');
-  }});
-  const target = document.getElementById('f' + n);
-  target.classList.add('active');
-  if (finalPop) target.classList.add('final-pop');
+function setFace(n) {{
+  faces.forEach(f => f.classList.remove('active'));
+  document.getElementById('f' + n).classList.add('active');
 }}
 
 if (IS_SPINNING) {{
-  let frames = 0;
-  const totalFrames = 25;
-  function tick() {{
-    if (frames < totalFrames) {{
+  let frame = 0;
+  const totalFrames = 30;
+  
+  function step() {{
+    if (frame < totalFrames) {{
       let randomFace = Math.floor(Math.random() * 6) + 1;
-      showFace(randomFace);
-      frames++;
-      setTimeout(tick, 60 + frames * 4); // 갈수록 살짝 느려지는 효과
+      setFace(randomFace);
+      frame++;
+      
+      // 점점 느려지게 (슬롯머신처럼)
+      let delay = 30 + (frame * 3); 
+      setTimeout(step, delay);
     }} else {{
-      showFace(FINAL_FACE, true);
+      setFace(FINAL_FACE);
     }}
   }}
-  tick();
+  step();
 }} else if (ALREADY_DONE) {{
-  showFace(FINAL_FACE);
+  setFace(FINAL_FACE);
 }} else {{
-  showFace(1);
+  setFace(1); // 초기면
 }}
 </script>
 </body>
 </html>
 """
-        # 아주 작고 귀여운 주사위이므로 공간은 140px만 있으면 충분합니다.
-        components.html(dice_html, height=140, scrolling=False)
+        # 작고 깔끔한 애니메이션이므로 height 150이면 충분합니다.
+        components.html(dice_html, height=150, scrolling=False)
 
         if spinning_now:
-            with st.spinner("🎲 주사위가 빠르게 돌아갑니다..."):
-                time.sleep(2.2) # JS 애니메이션 시간과 맞춤 (약 2.2초)
+            with st.spinner("🎲 주사위가 데굴데굴..."):
+                time.sleep(2.0) # JS 애니메이션 완료 시간에 맞춤
             st.session_state.spinning_now = False
             st.rerun()
 
@@ -1083,4 +1087,3 @@ with tab_mgmt:
             else:   st.session_state.excluded.discard(m["name"])
         if st.session_state.excluded:
             st.markdown(f"<div style='color:#f5576c;font-size:.82rem;margin-top:.5rem'>제외 중: {', '.join(st.session_state.excluded)}</div>", unsafe_allow_html=True)
-        
