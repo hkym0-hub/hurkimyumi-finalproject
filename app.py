@@ -26,12 +26,63 @@ def save_data():
         "history": st.session_state.history,
         "custom_menus": st.session_state.custom_menus,
         "excluded": list(st.session_state.excluded),
-        "today_log": st.session_state.today_log
+        "today_log": st.session_state.today_log,
+        "dark_mode": st.session_state.dark_mode  # 다크 모드 설정 저장 추가
     }
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-st.markdown("""
+# ── 세션 초기화 ───────────────────────────────────────────────
+def init():
+    saved_data = load_data()
+    defaults = {
+        "history": saved_data.get("history", []), 
+        "excluded": set(saved_data.get("excluded", [])), 
+        "custom_menus": saved_data.get("custom_menus", []),
+        "active_cat": "저녁 메뉴", "active_method": None,
+        "tournament_state": None, "scratch_revealed": False,
+        "scratch_menu": None, "last_result": None,
+        "_random_result": None,
+        "battle_result": None,
+        "today_log": saved_data.get("today_log", []),
+        "fortune_today": None, "fortune_date": None,
+        "tarot_cards": None, "tarot_chosen": None,
+        "filter_cal_min": 0, "filter_cal_max": 1200,
+        "filter_food_type": "전체", "filter_budget": "전체",
+        "roulette_done": False, "roulette_winner": None,
+        "roulette_winner_idx": 0,
+        "spinning_now": False,
+        "dice_winner": None, "dice_face": 1,
+        "dark_mode": saved_data.get("dark_mode", False)  # 기본값 False
+    }
+    for k, v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
+    # 타입 강제 보정
+    if not isinstance(st.session_state.excluded, set):
+        st.session_state.excluded = set()
+    if not isinstance(st.session_state.history, list):
+        st.session_state.history = []
+    if not isinstance(st.session_state.custom_menus, list):
+        st.session_state.custom_menus = []
+    if not isinstance(st.session_state.today_log, list):
+        st.session_state.today_log = []
+    if st.session_state.active_cat not in MENU_DATA:
+        st.session_state.active_cat = "저녁 메뉴"
+init()
+
+# ── 사이드바 (다크 모드 설정) ──────────────────────────────────────
+with st.sidebar:
+    st.markdown("### ⚙️ 앱 설정")
+    # 토글의 값이 변경되면 상태를 업데이트하고 재렌더링
+    is_dark = st.toggle("🌙 다크 모드 켜기", value=st.session_state.dark_mode)
+    if is_dark != st.session_state.dark_mode:
+        st.session_state.dark_mode = is_dark
+        save_data()
+        st.rerun()
+
+# ── CSS 스타일 (다크 모드 조건부 렌더링) ───────────────────────────
+css_base = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;900&display=swap');
 html,body,[class*="css"]{font-family:'Noto Sans KR',sans-serif;}
@@ -61,22 +112,23 @@ html,body,[class*="css"]{font-family:'Noto Sans KR',sans-serif;}
 .stMarkdown p,label,.stMetric,[data-testid="stMetricLabel"],[data-testid="stMetricValue"]{color:#111!important;}
 [data-testid="stMetricValue"]{color:#1a1a2e!important;}
 hr{border-color:#ddd!important;}
-#MainMenu,footer,header{visibility:hidden;}
-.stButton>button{border-radius:12px!important;font-weight:700!important;font-family:'Noto Sans KR',sans-serif!important;}
-.stTabs [data-baseweb="tab"]{border-radius:10px!important;font-weight:600!important;font-family:'Noto Sans KR',sans-serif!important;}
+"""
 
-/* 🌙 다크 모드 완벽 대응 */
-@media (prefers-color-scheme: dark) {
-    .stApp { background: #121212 !important; }
-    .method-card, .hist-item, .rank-card, .info-card, .wc-option { background: #1e1e1e !important; color: #eee !important; border: 1px solid #333 !important; }
-    .method-card-title, .result-name, .wc-name, b, .stMarkdown p, label, .stMetric, [data-testid="stMetricLabel"], [data-testid="stMetricValue"] { color: #eee !important; }
-    .method-card-desc, .wc-cal { color: #aaa !important; }
-    .cal-bar-wrap { background: #333 !important; }
-    .hist-item, .rank-card, .info-card { box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important; }
-    .wc-option:hover { background: #2a2a35 !important; border-color: #667eea !important; }
-}
-</style>
-""", unsafe_allow_html=True)
+css_dark_overrides = """
+.stApp { background: #121212 !important; }
+.method-card, .hist-item, .rank-card, .info-card, .wc-option { background: #1e1e1e !important; color: #eee !important; border: 1px solid #333 !important; }
+.method-card-title, .result-name, .wc-name, b, .stMarkdown p, label, .stMetric, [data-testid="stMetricLabel"], [data-testid="stMetricValue"] { color: #eee !important; }
+.method-card-desc, .wc-cal { color: #aaa !important; }
+.cal-bar-wrap { background: #333 !important; }
+.hist-item, .rank-card, .info-card { box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important; }
+.wc-option:hover { background: #2a2a35 !important; border-color: #667eea !important; }
+"""
+
+# 다크 모드가 켜져있으면 CSS에 다크 모드 덮어쓰기 적용
+if st.session_state.dark_mode:
+    st.markdown(f"{css_base} \n {css_dark_overrides} \n </style>", unsafe_allow_html=True)
+else:
+    st.markdown(f"{css_base} \n </style>", unsafe_allow_html=True)
 
 # ── 데이터 ────────────────────────────────────────────────────
 CATEGORY_EMOJI = {
@@ -114,35 +166,6 @@ FORTUNES = [
     ("절약 모드인 날 💰", "가성비 최고 메뉴를 골라봐요!"),
     ("누군가와 함께하고 싶은 날 🤝", "여럿이 나눠 먹기 좋은 메뉴로!"),
 ]
-
-# ── 세션 초기화 ───────────────────────────────────────────────
-def init():
-    saved_data = load_data()
-    defaults = {
-        "history": saved_data.get("history", []), 
-        "excluded": set(saved_data.get("excluded", [])), 
-        "custom_menus": saved_data.get("custom_menus", []),
-        "active_cat": "저녁 메뉴", "active_method": None,
-        "tournament_state": None, "scratch_revealed": False,
-        "scratch_menu": None, "last_result": None,
-        "_random_result": None,
-        "battle_result": None,
-        "today_log": saved_data.get("today_log", []),
-        "fortune_today": None, "fortune_date": None,
-        "tarot_cards": None, "tarot_chosen": None,
-        "filter_cal_min": 0, "filter_cal_max": 1200,
-        "filter_food_type": "전체", "filter_budget": "전체",
-        "roulette_done": False, "roulette_winner": None,
-        "roulette_winner_idx": 0,
-        "spinning_now": False,
-        "dice_winner": None, "dice_face": 1
-    }
-    for k, v in defaults.items():
-        if k not in st.session_state:
-            st.session_state[k] = v
-    if st.session_state.active_cat not in MENU_DATA:
-        st.session_state.active_cat = "저녁 메뉴"
-init()
 
 # ── 헬퍼 ─────────────────────────────────────────────────────
 def get_all_menus():
