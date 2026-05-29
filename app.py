@@ -103,7 +103,7 @@ def init():
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
-    # 타입 강제 보정 (기존 배포 세션 호환)
+    # 타입 강제 보정
     if not isinstance(st.session_state.excluded, set):
         st.session_state.excluded = set()
     if not isinstance(st.session_state.history, list):
@@ -118,7 +118,6 @@ init()
 
 # ── 헬퍼 ─────────────────────────────────────────────────────
 def get_all_menus():
-    # 방어: excluded가 set이 아닌 경우 (기존 세션 호환)
     if not isinstance(st.session_state.get("excluded"), set):
         st.session_state.excluded = set()
     if not isinstance(st.session_state.get("custom_menus"), list):
@@ -648,119 +647,93 @@ canvas.addEventListener('touchend', () => isDrawing = false);
 <meta charset="utf-8">
 <style>
   * {{ margin:0; padding:0; box-sizing:border-box; }}
-  body {{ background:transparent; display:flex; flex-direction:column; align-items:center; padding:10px; gap:0; }}
-  #scene {{ width:140px; height:140px; perspective:800px; margin-top:60px; margin-bottom:20px; }}
-  #cube {{ width:100%; height:100%; position:relative; transform-style:preserve-3d; transition: none; }}
-  .face {{ position:absolute; width:140px; height:140px; border-radius:18px; background:white;
-    display:flex; align-items:center; justify-content:center;
-    box-shadow:inset 0 0 0 4px rgba(0,0,0,0.08), 0 4px 20px rgba(0,0,0,0.12); }}
-  .face.front  {{ transform: translateZ(70px); }}
-  .face.back   {{ transform: rotateY(180deg) translateZ(70px); }}
-  .face.right  {{ transform: rotateY(90deg)  translateZ(70px); }}
-  .face.left   {{ transform: rotateY(-90deg) translateZ(70px); }}
-  .face.top    {{ transform: rotateX(90deg)  translateZ(70px); }}
-  .face.bottom {{ transform: rotateX(-90deg) translateZ(70px); }}
-  .dots {{ display:grid; width:100%; height:100%; padding:16px; }}
-  .dot {{ width:18px; height:18px; border-radius:50%; background:#1a1a2e; }}
-  .f1 {{ grid-template-columns:1fr; grid-template-rows:1fr; place-items:center; }}
-  .f2 {{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; }}
-  .f2 .d1 {{ grid-column:1; grid-row:1; align-self:start; justify-self:start; }}
-  .f2 .d2 {{ grid-column:2; grid-row:2; align-self:end;   justify-self:end;   }}
-  .f3 {{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr 1fr; }}
-  .f3 .d1 {{ grid-column:1; grid-row:1; align-self:start; justify-self:start; }}
-  .f3 .d2 {{ grid-column:2; grid-row:2; align-self:center; justify-self:end; }}
-  .f3 .d3 {{ grid-column:1; grid-row:3; align-self:end; justify-self:start; }}
-  .f4 {{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:8px; place-items:center; }}
-  .f5 {{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr 1fr; gap:4px; place-items:center; }}
-  .f5 .d5 {{ grid-column:1/3; grid-row:2; }}
-  .f6 {{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr 1fr; gap:4px; place-items:center; }}
+  body {{ background:transparent; display:flex; justify-content:center; padding:20px; }}
+  #dice-wrap {{ position:relative; width:100px; height:100px; }}
+  
+  .face {{
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    background:white; border-radius:16px;
+    box-shadow: inset 0 0 0 3px rgba(0,0,0,0.05), 0 4px 15px rgba(0,0,0,0.1);
+    opacity:0; transition:opacity 0.12s ease-in-out;
+  }}
+  .face.active {{ opacity:1; z-index:10; }}
+  .face.final-pop {{
+    animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  }}
+  
+  @keyframes pop {{
+    0% {{ transform:scale(1); }}
+    50% {{ transform:scale(1.15); box-shadow: inset 0 0 0 3px rgba(0,0,0,0.05), 0 10px 25px rgba(102,126,234,0.3); }}
+    100% {{ transform:scale(1); }}
+  }}
+  
+  .dot {{ position:absolute; width:16px; height:16px; border-radius:50%; background:#1a1a2e; }}
+  
+  /* Dot positions */
+  .c {{ top:50%; left:50%; transform:translate(-50%, -50%); }}
+  .tl {{ top:16px; left:16px; }}
+  .tr {{ top:16px; right:16px; }}
+  .bl {{ bottom:16px; left:16px; }}
+  .br {{ bottom:16px; right:16px; }}
+  .ml {{ top:50%; left:16px; transform:translateY(-50%); }}
+  .mr {{ top:50%; right:16px; transform:translateY(-50%); }}
 </style>
 </head>
 <body>
-<div id="scene">
-  <div id="cube">
-    <div class="face front"><div class="dots f1"><div class="dot"></div></div></div>
-    <div class="face back"><div class="dots f6"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
-    <div class="face right"><div class="dots f2"><div class="dot d1"></div><div class="dot" style="grid-column:2;grid-row:1;align-self:start;justify-self:end;"></div><div class="dot" style="grid-column:1;grid-row:2;align-self:end;justify-self:start;"></div><div class="dot d2"></div></div></div>
-    <div class="face left"><div class="dots f5"><div class="dot"></div><div class="dot"></div><div class="dot d5"></div><div class="dot"></div><div class="dot"></div></div></div>
-    <div class="face top"><div class="dots f3"><div class="dot d1"></div><div style="grid-column:2;grid-row:1;"></div><div style="grid-column:1;grid-row:2;"></div><div class="dot d2"></div><div class="dot d3"></div><div style="grid-column:2;grid-row:3;"></div></div></div>
-    <div class="face bottom"><div class="dots f4"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
-  </div>
+<div id="dice-wrap">
+  <div class="face" id="f1"><div class="dot c"></div></div>
+  <div class="face" id="f2"><div class="dot tl"></div><div class="dot br"></div></div>
+  <div class="face" id="f3"><div class="dot tl"></div><div class="dot c"></div><div class="dot br"></div></div>
+  <div class="face" id="f4"><div class="dot tl"></div><div class="dot tr"></div><div class="dot bl"></div><div class="dot br"></div></div>
+  <div class="face" id="f5"><div class="dot tl"></div><div class="dot tr"></div><div class="dot c"></div><div class="dot bl"></div><div class="dot br"></div></div>
+  <div class="face" id="f6"><div class="dot tl"></div><div class="dot tr"></div><div class="dot ml"></div><div class="dot mr"></div><div class="dot bl"></div><div class="dot br"></div></div>
 </div>
 
 <script>
 const FINAL_FACE = {dice_face};
 const IS_SPINNING = {"true" if spinning_now else "false"};
 const ALREADY_DONE = {"true" if dice_done else "false"};
+const faces = document.querySelectorAll('.face');
 
-const FACE_ROTS = {{
-  1: [0, 0], 2: [0, -90], 3: [-90, 0], 4: [90, 0], 5: [0, 90], 6: [0, 180]
-}};
-
-const cube = document.getElementById('cube');
-let currentX = 0, currentY = 0;
-
-function setRotation(x, y, animate) {{
-  cube.style.transition = animate ? 'transform 0.08s linear' : 'none';
-  cube.style.transform = `rotateX(${{x}}deg) rotateY(${{y}}deg)`;
-  currentX = x; currentY = y;
-}}
-
-function rollAnimation() {{
-  const totalFrames = 35; // 조금 더 길고 역동적으로 변경
-  let frame = 0;
-  const sequence = [];
-  
-  for (let i = 0; i < totalFrames; i++) {{
-    sequence.push({{
-      x: currentX + (Math.random() - 0.5) * 360,
-      y: currentY + (Math.random() - 0.5) * 360,
-      z: (Math.random() - 0.5) * 180
-    }});
-  }}
-  
-  const [finalX, finalY] = FACE_ROTS[FINAL_FACE];
-  const spinX = Math.round(currentX / 360) * 360 + finalX + 1080;
-  const spinY = Math.round(currentY / 360) * 360 + finalY + 1440;
-
-  function step() {{
-    if (frame < sequence.length) {{
-      let progress = frame / totalFrames;
-      let jumpY = Math.sin(progress * Math.PI) * -80; // 공중으로 80px 떠오름
-      let scale = 1 + Math.sin(progress * Math.PI) * 0.4; // 1.4배 커짐
-
-      cube.style.transition = 'transform 0.06s linear';
-      cube.style.transform = `translateY(${{jumpY}}px) scale(${{scale}}) rotateX(${{sequence[frame].x}}deg) rotateY(${{sequence[frame].y}}deg) rotateZ(${{sequence[frame].z}}deg)`;
-      
-      frame++;
-      setTimeout(step, frame < 20 ? 30 : 60);
-    }} else {{
-      cube.style.transition = 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)'; // 바닥에 착! 떨어지는 텐션
-      cube.style.transform = `translateY(0px) scale(1) rotateX(${{spinX}}deg) rotateY(${{spinY}}deg) rotateZ(0deg)`;
-      currentX = spinX; currentY = spinY;
-    }}
-  }}
-  step();
+function showFace(n, finalPop = false) {{
+  faces.forEach(f => {{
+      f.classList.remove('active');
+      f.classList.remove('final-pop');
+  }});
+  const target = document.getElementById('f' + n);
+  target.classList.add('active');
+  if (finalPop) target.classList.add('final-pop');
 }}
 
 if (IS_SPINNING) {{
-  rollAnimation();
+  let frames = 0;
+  const totalFrames = 25;
+  function tick() {{
+    if (frames < totalFrames) {{
+      let randomFace = Math.floor(Math.random() * 6) + 1;
+      showFace(randomFace);
+      frames++;
+      setTimeout(tick, 60 + frames * 4); // 갈수록 살짝 느려지는 효과
+    }} else {{
+      showFace(FINAL_FACE, true);
+    }}
+  }}
+  tick();
 }} else if (ALREADY_DONE) {{
-  const [fx, fy] = FACE_ROTS[FINAL_FACE];
-  setRotation(fx, fy, false);
+  showFace(FINAL_FACE);
 }} else {{
-  setRotation(0, 0, false);
+  showFace(1);
 }}
 </script>
 </body>
 </html>
 """
-        # 점프하는 공간을 위해 height를 300으로 늘렸습니다.
-        components.html(dice_html, height=300, scrolling=False)
+        # 아주 작고 귀여운 주사위이므로 공간은 140px만 있으면 충분합니다.
+        components.html(dice_html, height=140, scrolling=False)
 
         if spinning_now:
-            with st.spinner("🎲 주사위가 데굴데굴..."):
-                time.sleep(2.5) # JS 애니메이션 시간과 맞춤
+            with st.spinner("🎲 주사위가 빠르게 돌아갑니다..."):
+                time.sleep(2.2) # JS 애니메이션 시간과 맞춤 (약 2.2초)
             st.session_state.spinning_now = False
             st.rerun()
 
@@ -1110,3 +1083,4 @@ with tab_mgmt:
             else:   st.session_state.excluded.discard(m["name"])
         if st.session_state.excluded:
             st.markdown(f"<div style='color:#f5576c;font-size:.82rem;margin-top:.5rem'>제외 중: {', '.join(st.session_state.excluded)}</div>", unsafe_allow_html=True)
+        
