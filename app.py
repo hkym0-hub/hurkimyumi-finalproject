@@ -2,11 +2,34 @@ import streamlit as st
 import streamlit.components.v1 as components
 import random
 import time
+import os
 from datetime import datetime, date
 from collections import Counter, defaultdict
 import json
 
 st.set_page_config(page_title="오늘의 추천 메뉴", page_icon="🍽️", layout="wide", initial_sidebar_state="collapsed")
+
+# ── 데이터 영구 저장 함수 ──────────────────────────────────────────
+DATA_FILE = "my_food_data.json"
+
+def load_data():
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+def save_data():
+    data = {
+        "history": st.session_state.history,
+        "custom_menus": st.session_state.custom_menus,
+        "excluded": list(st.session_state.excluded),
+        "today_log": st.session_state.today_log
+    }
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
 st.markdown("""
 <style>
@@ -41,6 +64,17 @@ hr{border-color:#ddd!important;}
 #MainMenu,footer,header{visibility:hidden;}
 .stButton>button{border-radius:12px!important;font-weight:700!important;font-family:'Noto Sans KR',sans-serif!important;}
 .stTabs [data-baseweb="tab"]{border-radius:10px!important;font-weight:600!important;font-family:'Noto Sans KR',sans-serif!important;}
+
+/* 🌙 다크 모드 완벽 대응 */
+@media (prefers-color-scheme: dark) {
+    .stApp { background: #121212 !important; }
+    .method-card, .hist-item, .rank-card, .info-card, .wc-option { background: #1e1e1e !important; color: #eee !important; border: 1px solid #333 !important; }
+    .method-card-title, .result-name, .wc-name, b, .stMarkdown p, label, .stMetric, [data-testid="stMetricLabel"], [data-testid="stMetricValue"] { color: #eee !important; }
+    .method-card-desc, .wc-cal { color: #aaa !important; }
+    .cal-bar-wrap { background: #333 !important; }
+    .hist-item, .rank-card, .info-card { box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important; }
+    .wc-option:hover { background: #2a2a35 !important; border-color: #667eea !important; }
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -83,14 +117,17 @@ FORTUNES = [
 
 # ── 세션 초기화 ───────────────────────────────────────────────
 def init():
+    saved_data = load_data()
     defaults = {
-        "history": [], "excluded": set(), "custom_menus": [],
+        "history": saved_data.get("history", []), 
+        "excluded": set(saved_data.get("excluded", [])), 
+        "custom_menus": saved_data.get("custom_menus", []),
         "active_cat": "저녁 메뉴", "active_method": None,
         "tournament_state": None, "scratch_revealed": False,
         "scratch_menu": None, "last_result": None,
         "_random_result": None,
         "battle_result": None,
-        "today_log": [],
+        "today_log": saved_data.get("today_log", []),
         "fortune_today": None, "fortune_date": None,
         "tarot_cards": None, "tarot_chosen": None,
         "filter_cal_min": 0, "filter_cal_max": 1200,
@@ -103,15 +140,6 @@ def init():
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
-    # 타입 강제 보정
-    if not isinstance(st.session_state.excluded, set):
-        st.session_state.excluded = set()
-    if not isinstance(st.session_state.history, list):
-        st.session_state.history = []
-    if not isinstance(st.session_state.custom_menus, list):
-        st.session_state.custom_menus = []
-    if not isinstance(st.session_state.today_log, list):
-        st.session_state.today_log = []
     if st.session_state.active_cat not in MENU_DATA:
         st.session_state.active_cat = "저녁 메뉴"
 init()
@@ -151,6 +179,7 @@ def add_history(menu, method):
     today = date.today().isoformat()
     st.session_state.today_log.append({"menu": menu["name"], "emoji": menu.get("emoji","🍽️"),
                                         "cal": kcal, "date": today, "time": datetime.now().strftime("%H:%M")})
+    save_data()
 
 def adopt_button(menu, method, key_suffix=""):
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -873,7 +902,7 @@ with tab_hist:
                 <div style="color:#667eea;font-weight:700">{h['cal']} kcal</div>
             </div>""", unsafe_allow_html=True)
         if st.button("🗑️ 이력 초기화"):
-            st.session_state.history = []; st.rerun()
+            st.session_state.history = []; save_data(); st.rerun()
     else:
         st.info("아직 채택한 메뉴가 없어요! 추천 결과에서 '✅ 이 메뉴로 결정!' 버튼을 눌러 기록하세요.")
 
@@ -903,7 +932,9 @@ with tab_tracker:
                 <div style="color:#f5576c;font-weight:700">+{e['cal']} kcal</div>
             </div>""", unsafe_allow_html=True)
         if st.button("🗑️ 오늘 기록 초기화"):
-            st.session_state.today_log = [e for e in st.session_state.today_log if e["date"] != today]; st.rerun()
+            st.session_state.today_log = [e for e in st.session_state.today_log if e["date"] != today]
+            save_data()
+            st.rerun()
     else:
         st.info("오늘 아직 채택한 메뉴가 없어요!")
     if st.session_state.today_log:
@@ -912,7 +943,8 @@ with tab_tracker:
         for e in st.session_state.today_log: daily[e["date"]] += e["cal"]
         sorted_days = sorted(daily.keys())[-7:]; max_cal = max(daily.values())
         for d in sorted_days:
-            bw = daily[d] / max_cal * 100; label = "오늘" if d == today else d[5:]
+            bw = daily[d] / max_cal * 100 if max_cal > 0 else 0
+            label = "오늘" if d == today else d[5:]
             st.markdown(f"""<div style="display:flex;align-items:center;gap:.8rem;margin:.3rem 0">
                 <span style="width:3rem;font-size:.82rem;color:#555">{label}</span>
                 <div style="flex:1;background:#f0f2f8;border-radius:6px;height:20px;overflow:hidden">
@@ -1020,6 +1052,14 @@ with tab_analysis:
 # ── 추천 피드 ─────────────────────────────────────────────────
 with tab_feed:
     st.markdown("### 💡 추천 피드")
+    
+    if st.session_state.history:
+        latest = st.session_state.history[0]
+        share_text = f"오늘의 추천 메뉴는 [{latest['emoji']} {latest['menu']}]🔥\n(칼로리: {latest['cal']}kcal)\n우리 이거 먹으러 갈래? 😋"
+        with st.expander("💬 카카오톡/문자로 방금 고른 메뉴 공유하기", expanded=True):
+            st.markdown("아래 텍스트 우측 상단의 **복사 아이콘**을 클릭해 친구에게 바로 공유해보세요!")
+            st.code(share_text, language="markdown")
+            
     st.markdown("**🔄 최근 채택한 메뉴 다시 먹기**")
     if st.session_state.history:
         recent = st.session_state.history[:5]
@@ -1074,6 +1114,7 @@ with tab_mgmt:
         if st.button("추가", type="primary"):
             if nm.strip():
                 st.session_state.custom_menus.append({"name":nm.strip(),"cal":nc,"emoji":ne,"food_type":nft,"budget":nbd,"delivery":ndv})
+                save_data()
                 st.success(f"'{nm}' 추가 완료!"); st.rerun()
             else: st.error("이름을 입력하세요.")
         if st.session_state.custom_menus:
@@ -1083,13 +1124,20 @@ with tab_mgmt:
                 with ca: st.write(f"{m['emoji']} {m['name']} ({m['cal']}kcal)")
                 with cb:
                     if st.button("🗑️", key=f"del_{i}"):
-                        st.session_state.custom_menus.pop(i); st.rerun()
+                        st.session_state.custom_menus.pop(i)
+                        save_data()
+                        st.rerun()
     with col_excl:
         st.markdown(f"**🚫 메뉴 제외 설정** — {st.session_state.active_cat}")
+        original_excluded = st.session_state.excluded.copy()
         for m in MENU_DATA.get(st.session_state.active_cat, []):
             excluded = m["name"] in st.session_state.excluded
             chk = st.checkbox(f"{m['emoji']} {m['name']}", value=excluded, key=f"ex_{m['name']}")
             if chk: st.session_state.excluded.add(m["name"])
             else:   st.session_state.excluded.discard(m["name"])
+        
+        if original_excluded != st.session_state.excluded:
+            save_data()
+            
         if st.session_state.excluded:
             st.markdown(f"<div style='color:#f5576c;font-size:.82rem;margin-top:.5rem'>제외 중: {', '.join(st.session_state.excluded)}</div>", unsafe_allow_html=True)
