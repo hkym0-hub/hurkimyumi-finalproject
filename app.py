@@ -107,7 +107,7 @@ def init():
         st.session_state.active_cat = "저녁 메뉴"
 init()
 
-# ── CSS 스타일 ───────────────────────────
+# ── CSS 스타일 (다크 모드 조건부 렌더링) ───────────────────────────
 css_base = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;900&display=swap');
@@ -153,6 +153,14 @@ h1, h2, h3, h4, h5, h6, .stMarkdown p, .stMarkdown div { color: #eee !important;
 .hist-item, .rank-card, .info-card { box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important; }
 .wc-option:hover { background: #2a2a35 !important; border-color: #667eea !important; }
 .stButton>button[kind="secondary"] { color: #eee !important; border-color: #555 !important; background: rgba(255,255,255,0.05) !important; }
+
+/* 탭 메뉴 글자색 강제 변환 */
+.stTabs [data-baseweb="tab"] p, 
+.stTabs [data-baseweb="tab"] span, 
+.stTabs [data-baseweb="tab"] div,
+button[role="tab"],
+button[role="tab"] p,
+button[role="tab"] span { color: #eee !important; }
 
 /* 인라인 색상 강제 변환 */
 [style*="color:#111"], [style*="color:#1a1a2e"], [style*="color:#333"],
