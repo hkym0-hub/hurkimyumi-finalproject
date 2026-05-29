@@ -364,19 +364,126 @@ else:
     if st.button("← 돌아가기", key="back"):
         reset_method(); st.rerun()
 
-    # ── 랜덤 ─────────────────────────────────────────────────
+   # ── 랜덤 (슬롯머신 애니메이션) ───────────────────────────────────
     if method == "random":
-        st.markdown("### 🎲 랜덤 추천")
-        if st.button("🎲 지금 바로 추천!", type="primary", use_container_width=True):
-            st.session_state._random_result = random.choice(menus)
-            st.rerun()
-        if st.session_state._random_result:
+        st.markdown("### 🎰 랜덤 추천")
+
+        menu_names  = [m["name"]      for m in menus]
+        menu_emojis = [m.get("emoji","🍽️") for m in menus]
+
+        if "spinning_now" not in st.session_state:
+            st.session_state.spinning_now = False
+
+        if st.session_state.spinning_now:
             r = st.session_state._random_result
-            result_card(r, "🎲 랜덤")
-            adopt_button(r, "🎲 랜덤", key_suffix=f"random_{r['name']}")
-            if st.button("🔄 다시 추천", use_container_width=True):
-                st.session_state._random_result = random.choice(menus)
-                st.rerun()
+            names_json   = json.dumps(menu_names, ensure_ascii=False)
+            emojis_json  = json.dumps(menu_emojis, ensure_ascii=False)
+            target_name  = json.dumps(r["name"], ensure_ascii=False)
+            target_emoji = json.dumps(r.get("emoji","🍽️"), ensure_ascii=False)
+
+            slot_html = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+            <meta charset="utf-8">
+            <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@700;900&display=swap" rel="stylesheet">
+            <style>
+              * {{ margin:0; padding:0; box-sizing:border-box; }}
+              body {{ background:transparent; display:flex; justify-content:center; align-items:center; padding:20px; font-family:'Noto Sans KR',sans-serif; }}
+
+              .slot-window {{
+                  width: 320px;
+                  height: 160px;
+                  overflow: hidden;
+                  position: relative;
+                  background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+                  border-radius: 20px;
+                  box-shadow: 0 10px 40px rgba(102,126,234,0.4);
+              }}
+
+              /* 가운데 선택 영역을 강조하는 유리창 효과 */
+              .slot-window::before {{
+                  content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 64px;
+                  background: rgba(255,255,255,0.15); 
+                  border-top: 2px solid rgba(255,255,255,0.5); 
+                  border-bottom: 2px solid rgba(255,255,255,0.5);
+                  transform: translateY(-50%); pointer-events: none; z-index: 5;
+              }}
+
+              .slot-strip {{
+                  position: absolute; top: 0; left: 0; width: 100%;
+                  display: flex; flex-direction: column; align-items: center;
+                  /* 2.5초 동안 서서히 멈추는 애니메이션 */
+                  transition: transform 2.5s cubic-bezier(0.1, 0.85, 0.2, 1);
+              }}
+
+              .slot-item {{
+                  height: 160px; /* 창 높이와 동일하게 설정하여 한 칸씩 꽉 차게 보임 */
+                  display: flex; flex-direction: column; justify-content: center; align-items: center;
+              }}
+
+              .slot-emoji {{ font-size: 3.5rem; line-height: 1.2; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2)); }}
+              .slot-name {{ font-size: 1.8rem; font-weight: 900; color: white; text-shadow: 0 2px 8px rgba(0,0,0,0.3); }}
+            </style>
+            </head>
+            <body>
+              <div class="slot-window">
+                <div class="slot-strip" id="strip"></div>
+              </div>
+              <script>
+                 const NAMES  = {names_json};
+                 const EMOJIS = {emojis_json};
+                 const targetName = {target_name};
+                 const targetEmoji = {target_emoji};
+
+                 const strip = document.getElementById('strip');
+                 let html = '';
+                 const spins = 25; // 최종 결과 전에 지나갈 더미(가짜) 메뉴 개수
+
+                 // 무작위로 지나가는 음식들 생성
+                 for(let i=0; i<spins; i++) {{
+                     let r = Math.floor(Math.random() * NAMES.length);
+                     html += `<div class="slot-item"><div class="slot-emoji">${{EMOJIS[r]}}</div><div class="slot-name">${{NAMES[r]}}</div></div>`;
+                 }}
+                 // 마지막 칸에 최종 당첨 메뉴 삽입
+                 html += `<div class="slot-item"><div class="slot-emoji">${{targetEmoji}}</div><div class="slot-name">${{targetName}}</div></div>`;
+
+                 strip.innerHTML = html;
+
+                 // 아주 짧은 시간 뒤에 스크롤 트랜지션 실행
+                 setTimeout(() => {{
+                     strip.style.transform = `translateY(-${{spins * 160}}px)`;
+                 }}, 50);
+              </script>
+            </body>
+            </html>
+            """
+            components.html(slot_html, height=200, scrolling=False)
+
+            # 자바스크립트 애니메이션이 끝날 때까지 대기
+            with st.spinner("🎰 슬롯머신이 돌아갑니다..."):
+                time.sleep(2.6) 
+            st.session_state.spinning_now = False
+            st.rerun()
+
+        elif st.session_state._random_result:
+            r = st.session_state._random_result
+            result_card(r, "🎰 슬롯 추천")
+            adopt_button(r, "🎰 슬롯 추천", key_suffix=f"random_{r['name']}")
+            
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                if st.button("🔄 다시 돌리기", use_container_width=True):
+                    st.session_state._random_result = random.choice(menus)
+                    st.session_state.spinning_now = True
+                    st.rerun()
+        else:
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                if st.button("🎰 슬롯머신 돌리기!", type="primary", use_container_width=True):
+                    st.session_state._random_result = random.choice(menus)
+                    st.session_state.spinning_now = True
+                    st.rerun()
 
     # ── 룰렛 (Canvas 회전 바퀴) ───────────────────────────────
     elif method == "roulette":
