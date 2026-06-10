@@ -3,53 +3,11 @@ import streamlit.components.v1 as components
 import random
 import time
 import os
-import requests
 from datetime import datetime, date
 from collections import Counter, defaultdict
 import json
 
 st.set_page_config(page_title="오늘의 추천 메뉴", page_icon="🍽️", layout="wide", initial_sidebar_state="collapsed")
-
-# ── API 키 로드 ────────────────────────────────────────────────
-FOOD_API_KEY = st.secrets.get("FOOD_API_KEY", "")
-
-# ── 식품영양성분 API 호출 함수 ─────────────────────────────────
-@st.cache_data(ttl=86400, show_spinner=False)
-def fetch_kcal_from_api(food_name: str) -> int | None:
-    """
-    공공데이터포털 식품의약품안전처_식품영양성분DB 정보 API 호출
-    https://www.data.go.kr/data/15127578/openapi.do
-    """
-    if not FOOD_API_KEY:
-        return None
-    url = "https://apis.data.go.kr/1471000/FoodNtrCpntDbInfo02"
-    params = {
-        "serviceKey": FOOD_API_KEY,
-        "food_nm": food_name,
-        "type": "json",
-        "pageNo": 1,
-        "numOfRows": 5,
-    }
-    try:
-        res = requests.get(url, params=params, timeout=5)
-        data = res.json()
-        items = data.get("body", {}).get("items", [])
-        if not items:
-            return None
-        # 첫 번째 결과의 에너지(kcal) 필드 반환
-        # 필드명: AMT_NUM1 (에너지), 혹은 NUTR_CONT1 — 버전에 따라 다를 수 있음
-        item = items[0]
-        for key in ["AMT_NUM1", "NUTR_CONT1", "energy", "kcal"]:
-            if key in item and item[key] not in (None, "", "-"):
-                return int(float(item[key]))
-        return None
-    except Exception:
-        return None
-
-def get_kcal(menu_name: str, fallback_cal: int) -> int:
-    """API에서 칼로리를 가져오고, 실패 시 기존 하드코딩 값 사용"""
-    api_cal = fetch_kcal_from_api(menu_name)
-    return api_cal if api_cal is not None else fallback_cal
 
 # ── 데이터 영구 저장 함수 ──────────────────────────────────────────
 DATA_FILE = "my_food_data.json"
@@ -168,7 +126,6 @@ html,body,[class*="css"]{font-family:'Noto Sans KR',sans-serif;}
 .result-emoji{font-size:4rem;line-height:1;margin-bottom:.5rem;}
 .result-name{font-size:2.4rem;font-weight:900;margin-bottom:.5rem;}
 .result-cal{display:inline-block;background:rgba(255,255,255,.25);border-radius:999px;padding:.3rem 1.2rem;font-size:.95rem;font-weight:600;}
-.api-badge{display:inline-block;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);border-radius:999px;padding:.15rem .7rem;font-size:.75rem;margin-left:.5rem;vertical-align:middle;}
 .wc-option{background:white;border:3px solid #ddd;border-radius:16px;padding:1.8rem 1.2rem;text-align:center;transition:all .18s;}
 .wc-option:hover{border-color:#667eea;background:#f8f0ff;}
 .wc-emoji{font-size:2.5rem;}.wc-name{font-size:1.3rem;font-weight:800;margin:.5rem 0;color:#1a1a2e;}.wc-cal{font-size:.85rem;color:#aaa;}
@@ -224,10 +181,6 @@ with c3:
         save_data()
         st.rerun()
 
-# API 키 상태 표시
-if not FOOD_API_KEY:
-    st.warning("⚠️ FOOD_API_KEY가 설정되지 않았습니다. 칼로리는 기본값을 사용합니다. `.streamlit/secrets.toml`에 키를 추가하세요.")
-
 # ── 헬퍼 ─────────────────────────────────────────────────────
 def get_all_menus():
     if not isinstance(st.session_state.get("excluded"), set):
@@ -250,16 +203,12 @@ def get_menus():
     return apply_filters(get_all_menus())
 
 def add_history(menu, method):
-    # 채택 시 API로 실제 칼로리 조회
-    kcal = get_kcal(menu["name"], menu.get("cal", 0))
-    api_used = FOOD_API_KEY and kcal != menu.get("cal", 0)
     entry = {
-        "menu": menu["name"], "emoji": menu.get("emoji", "🍽️"), "cal": kcal,
+        "menu": menu["name"], "emoji": menu.get("emoji", "🍽️"), "cal": menu.get("cal", 0),
         "method": method, "cat": st.session_state.active_cat,
         "time": datetime.now().strftime("%m/%d %H:%M"),
         "hour": datetime.now().hour,
         "food_type": menu.get("food_type", "기타"),
-        "api_cal": api_used  # API로 가져온 칼로리인지 표시
     }
     st.session_state.history.insert(0, entry)
     if len(st.session_state.history) > 50:
@@ -268,35 +217,25 @@ def add_history(menu, method):
     today = date.today().isoformat()
     st.session_state.today_log.append({
         "menu": menu["name"], "emoji": menu.get("emoji", "🍽️"),
-        "cal": kcal, "date": today, "time": datetime.now().strftime("%H:%M")
+        "cal": menu.get("cal", 0), "date": today, "time": datetime.now().strftime("%H:%M")
     })
     save_data()
-    return kcal
+    return menu.get("cal", 0)
 
 def adopt_button(menu, method, key_suffix=""):
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         if st.button(f"✅ {menu['name']} (으)로 결정!", key=f"adopt_{key_suffix}", use_container_width=True, type="primary"):
-            with st.spinner("🔍 식품영양성분 DB에서 칼로리 조회 중..."):
-                kcal = add_history(menu, method)
-            api_note = " (식약처 DB 기준)" if FOOD_API_KEY else " (기본값)"
-            st.success(f"🎉 **{menu['name']}** 이(가) 오늘의 메뉴로 기록됐어요! 🔥 {kcal} kcal{api_note}")
+            add_history(menu, method)
+            st.success(f"🎉 **{menu['name']}** 이(가) 오늘의 메뉴로 기록됐어요! 🔥 {menu.get('cal', 0)} kcal")
             reset_method()
             st.rerun()
 
 def result_card(menu, method=""):
-    # 카드에 표시할 칼로리: API 조회 시도
-    display_cal = menu.get("cal", 0)
-    api_badge = ""
-    if FOOD_API_KEY:
-        fetched = fetch_kcal_from_api(menu["name"])
-        if fetched:
-            display_cal = fetched
-            api_badge = '<span class="api-badge">식약처 DB</span>'
     st.markdown(f"""<div class="result-card">
         <div class="result-emoji">{menu.get('emoji','🍽️')}</div>
         <div class="result-name">{menu['name']}</div>
-        <div class="result-cal">🔥 약 {display_cal} kcal &nbsp;·&nbsp; {method}{api_badge}</div>
+        <div class="result-cal">🔥 약 {menu.get('cal', 0)} kcal &nbsp;·&nbsp; {method}</div>
     </div>""", unsafe_allow_html=True)
 
 def reset_method():
@@ -420,14 +359,12 @@ else:
     if st.button("← 돌아가기", key="back"):
         reset_method(); st.rerun()
 
-    # ── 랜덤 ─────────────────────────────────────────────────
     if method == "random":
         st.markdown("### 🎰 랜덤 추천")
         menu_names = [m["name"] for m in menus]
         menu_emojis = [m.get("emoji", "🍽️") for m in menus]
         if "spinning_now" not in st.session_state:
             st.session_state.spinning_now = False
-
         if st.session_state.spinning_now:
             r = st.session_state._random_result
             names_json = json.dumps(menu_names, ensure_ascii=False)
@@ -453,7 +390,6 @@ else:
                 time.sleep(2.6)
             st.session_state.spinning_now = False
             st.rerun()
-
         elif st.session_state._random_result:
             r = st.session_state._random_result
             result_card(r, "🎰 슬롯 추천")
@@ -472,7 +408,6 @@ else:
                     st.session_state.spinning_now = True
                     st.rerun()
 
-    # ── 룰렛 ─────────────────────────────────────────────────
     elif method == "roulette":
         st.markdown("### 🎡 룰렛 바퀴")
         menu_names = [m["name"] for m in menus]
@@ -517,7 +452,6 @@ if(IS_DONE){{if(!sessionStorage.getItem('spin_done_'+TARGET_IDX)){{const targetA
                     st.session_state.roulette_winner_idx = random.randint(0, len(menus) - 1)
                     st.rerun()
 
-    # ── 스크래치 ─────────────────────────────────────────────
     elif method == "scratch":
         st.markdown("### 🎁 스크래치 복권")
         if not st.session_state.scratch_menu:
@@ -525,8 +459,7 @@ if(IS_DONE){{if(!sessionStorage.getItem('spin_done_'+TARGET_IDX)){{const targetA
         menu = st.session_state.scratch_menu
         menu_name = menu["name"]
         menu_emoji = menu.get("emoji", "🍽️")
-        # 스크래치 카드에도 API 칼로리 반영
-        menu_cal = get_kcal(menu_name, menu.get("cal", 0)) if FOOD_API_KEY else menu.get("cal", 0)
+        menu_cal = menu.get("cal", 0)
         scratch_html = f"""<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>*{{margin:0;padding:0;box-sizing:border-box;}}body{{background:transparent;font-family:'Noto Sans KR',sans-serif;display:flex;flex-direction:column;align-items:center;padding:20px 10px;}}
 #scratch-wrap{{position:relative;width:360px;height:220px;border-radius:20px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.2);cursor:crosshair;user-select:none;}}
@@ -551,17 +484,14 @@ canvas.addEventListener('touchstart',e=>{{isDrawing=true;scratch(e);}},{{passive
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             if st.button("✅ 이 메뉴로 결정!", key="scratch_adopt", type="primary", use_container_width=True):
-                with st.spinner("🔍 식품영양성분 DB에서 칼로리 조회 중..."):
-                    kcal = add_history(menu, "🎁 스크래치")
-                api_note = " (식약처 DB 기준)" if FOOD_API_KEY else " (기본값)"
-                st.success(f"🎉 **{menu['name']}** 이(가) 오늘의 메뉴로 기록됐어요! 🔥 {kcal} kcal{api_note}")
+                add_history(menu, "🎁 스크래치")
+                st.success(f"🎉 **{menu['name']}** 이(가) 오늘의 메뉴로 기록됐어요! 🔥 {menu_cal} kcal")
                 reset_method()
                 st.rerun()
             if st.button("🔄 다시 뽑기", key="scratch_retry", use_container_width=True):
                 st.session_state.scratch_menu = random.choice(menus)
                 st.rerun()
 
-    # ── 월드컵 ───────────────────────────────────────────────
     elif method == "worldcup":
         ts = st.session_state.tournament_state
         if ts is None:
@@ -589,19 +519,16 @@ canvas.addEventListener('touchstart',e=>{{isDrawing=true;scratch(e);}},{{passive
                 st.markdown(f"### 🏆 {n}강 — {idx + 1} / {len(pairs)} 경기"); st.progress(idx / len(pairs))
                 col_a, col_vs, col_b = st.columns([5, 1, 5])
                 with col_a:
-                    a_cal = get_kcal(a["name"], a["cal"]) if FOOD_API_KEY else a["cal"]
-                    st.markdown(f'<div class="wc-option"><div class="wc-emoji">{a["emoji"]}</div><div class="wc-name">{a["name"]}</div><div class="wc-cal">🔥 {a_cal} kcal</div></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="wc-option"><div class="wc-emoji">{a["emoji"]}</div><div class="wc-name">{a["name"]}</div><div class="wc-cal">🔥 {a["cal"]} kcal</div></div>', unsafe_allow_html=True)
                     if st.button(f"✅ {a['name']}", key=f"wa_{idx}", use_container_width=True, type="primary"):
                         ts["winners"].append(a); ts["pair_idx"] += 1; st.rerun()
                 with col_vs:
                     st.markdown('<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:130px;font-size:1.4rem;font-weight:900;color:#ccc">VS</div>', unsafe_allow_html=True)
                 with col_b:
-                    b_cal = get_kcal(b["name"], b["cal"]) if FOOD_API_KEY else b["cal"]
-                    st.markdown(f'<div class="wc-option"><div class="wc-emoji">{b["emoji"]}</div><div class="wc-name">{b["name"]}</div><div class="wc-cal">🔥 {b_cal} kcal</div></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="wc-option"><div class="wc-emoji">{b["emoji"]}</div><div class="wc-name">{b["name"]}</div><div class="wc-cal">🔥 {b["cal"]} kcal</div></div>', unsafe_allow_html=True)
                     if st.button(f"✅ {b['name']}", key=f"wb_{idx}", use_container_width=True, type="primary"):
                         ts["winners"].append(b); ts["pair_idx"] += 1; st.rerun()
 
-    # ── 주사위 ──────────────────────────────────────────────
     elif method == "dice":
         st.markdown("### 🎲 주사위")
         dice_face = st.session_state.get("dice_face", 1)
@@ -637,7 +564,6 @@ if(IS_SPINNING){{let frame=0;const totalFrames=25;function step(){{if(frame<tota
                     st.session_state.dice_face = random.randint(1, 6)
                     st.rerun()
 
-    # ── 카드 뽑기 ────────────────────────────────────────────
     elif method == "tarot":
         st.markdown("### 🃏 카드 뽑기")
         if not st.session_state.tarot_cards:
@@ -662,16 +588,14 @@ if(IS_SPINNING){{let frame=0;const totalFrames=25;function step(){{if(frame<tota
             ocols = st.columns(len(others))
             for col, card in zip(ocols, others):
                 with col:
-                    o_cal = get_kcal(card["name"], card["cal"]) if FOOD_API_KEY else card["cal"]
                     st.markdown(f"""<div style="background:#e8eaf6;border-radius:12px;padding:1rem;text-align:center;opacity:.7">
                         <div style="font-size:2rem">{card['emoji']}</div><div style="font-weight:700;color:#555">{card['name']}</div>
-                        <div style="font-size:.8rem;color:#aaa">🔥 {o_cal} kcal</div></div>""", unsafe_allow_html=True)
+                        <div style="font-size:.8rem;color:#aaa">🔥 {card['cal']} kcal</div></div>""", unsafe_allow_html=True)
             if st.button("🔄 다시 뽑기", use_container_width=True, type="secondary"):
                 st.session_state.tarot_cards = random.sample(menus, min(3, len(menus)))
                 st.session_state.tarot_chosen = None
                 st.rerun()
 
-    # ── 스마트 추천 ──────────────────────────────────────────
     elif method == "smart":
         st.markdown("### 🧠 스마트 추천")
         recent_names = {h["menu"] for h in st.session_state.history[:10]}
@@ -691,7 +615,6 @@ if(IS_SPINNING){{let frame=0;const totalFrames=25;function step(){{if(frame<tota
                 for i, n in enumerate(list(recent_names)):
                     with cols[i % 3]: st.markdown(f"- {n}")
 
-    # ── 대결 모드 ─────────────────────────────────────────────
     elif method == "battle":
         st.markdown("### ⚔️ 대결 모드")
         all_names = [m["name"] for m in menus]
@@ -726,7 +649,6 @@ tab_hist, tab_tracker, tab_rank, tab_analysis, tab_feed, tab_mgmt = st.tabs([
     "📋 추천 이력", "🔥 칼로리 트래커", "🏅 메뉴 랭킹", "📊 식습관 분석", "💡 추천 피드", "🔧 메뉴 관리"
 ])
 
-# ── 추천 이력 ─────────────────────────────────────────────────
 with tab_hist:
     if st.session_state.history:
         c1, c2, c3 = st.columns(3)
@@ -737,10 +659,9 @@ with tab_hist:
         with c3: st.metric("최다 채택 메뉴", max(set(menus_l), key=menus_l.count))
         st.markdown("<div style='height:.4rem'></div>", unsafe_allow_html=True)
         for h in st.session_state.history:
-            api_tag = " 🏷️식약처DB" if h.get("api_cal") else ""
             st.markdown(f"""<div class="hist-item">
                 <div>{h['emoji']} <b style="color:#111">{h['menu']}</b>
-                <span style="color:#aaa;font-size:.82rem"> · {h['time']} · {h['method']} · {h['cat']}{api_tag}</span></div>
+                <span style="color:#aaa;font-size:.82rem"> · {h['time']} · {h['method']} · {h['cat']}</span></div>
                 <div style="color:#667eea;font-weight:700">{h['cal']} kcal</div>
             </div>""", unsafe_allow_html=True)
         if st.button("🗑️ 이력 초기화"):
@@ -748,7 +669,6 @@ with tab_hist:
     else:
         st.info("아직 채택한 메뉴가 없어요! 추천 결과에서 '✅ 이 메뉴로 결정!' 버튼을 눌러 기록하세요.")
 
-# ── 칼로리 트래커 ─────────────────────────────────────────────
 with tab_tracker:
     today = date.today().isoformat()
     today_entries = [e for e in st.session_state.today_log if e["date"] == today]
@@ -794,7 +714,6 @@ with tab_tracker:
                 <span style="width:4rem;text-align:right;font-size:.82rem;color:#667eea;font-weight:700">{daily[d]} kcal</span>
             </div>""", unsafe_allow_html=True)
 
-# ── 메뉴 랭킹 ─────────────────────────────────────────────────
 with tab_rank:
     st.markdown("### 🏅 메뉴 랭킹")
     if st.session_state.history:
@@ -824,7 +743,6 @@ with tab_rank:
     else:
         st.info("채택한 메뉴가 쌓이면 랭킹이 표시돼요!")
 
-# ── 식습관 분석 ───────────────────────────────────────────────
 with tab_analysis:
     st.markdown("### 📊 나의 식습관 분석")
     if len(st.session_state.history) >= 3:
@@ -881,7 +799,6 @@ with tab_analysis:
     else:
         st.info("📊 분석을 위해 메뉴를 3회 이상 채택해보세요!")
 
-# ── 추천 피드 ─────────────────────────────────────────────────
 with tab_feed:
     st.markdown("### 💡 추천 피드")
     if st.session_state.history:
@@ -925,7 +842,6 @@ with tab_feed:
     else:
         st.info("먼저 메뉴를 채택하면 비슷한 메뉴를 추천해드려요!")
 
-# ── 메뉴 관리 ─────────────────────────────────────────────────
 with tab_mgmt:
     col_add, col_excl = st.columns(2)
     with col_add:
@@ -936,17 +852,6 @@ with tab_mgmt:
         nft = st.selectbox("음식 종류", ["밥", "면", "고기", "기타"], key="add_ft")
         nbd = st.selectbox("예산 (저: 만 오천원 이하, 중: 만 오천원 ~ 3만원, 고: 3만원 이상)", ["저", "중", "고"], key="add_bd")
         ndv = st.checkbox("배달 가능", key="add_dv")
-
-        # API로 칼로리 자동 조회 버튼
-        if FOOD_API_KEY and nm.strip():
-            if st.button("🔍 식약처 DB에서 칼로리 자동 조회", type="secondary"):
-                with st.spinner(f"'{nm}' 칼로리 조회 중..."):
-                    fetched = fetch_kcal_from_api(nm.strip())
-                if fetched:
-                    st.success(f"✅ 식약처 DB 기준 칼로리: **{fetched} kcal** (위 칼로리 입력란에 직접 입력해주세요)")
-                else:
-                    st.warning("DB에서 해당 음식을 찾지 못했습니다. 직접 입력해주세요.")
-
         if st.button("추가", type="primary"):
             if nm.strip():
                 st.session_state.custom_menus.append({"name": nm.strip(), "cal": nc, "emoji": ne, "food_type": nft, "budget": nbd, "delivery": ndv})
