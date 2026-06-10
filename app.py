@@ -749,7 +749,7 @@ with tab_rank:
     else:
         st.info("채택한 메뉴가 쌓이면 랭킹이 표시돼요!")
 
-# ── 📊 식습관 분석 탭 (순수 스트림릿 차트 버전으로 수정) ────────────────
+# ── 📊 식습관 분석 탭 (Altair 적용: 글씨 눕히기 버전) ────────────────────────────────
 with tab_analysis:
     st.markdown("### 📊 나의 식습관 분석")
     if len(st.session_state.history) >= 3:
@@ -757,6 +757,9 @@ with tab_analysis:
         avg_cal = sum(h["cal"] for h in hist) // len(hist)
         max_cal_entry = max(hist, key=lambda h: h["cal"])
         min_cal_entry = min(hist, key=lambda h: h["cal"])
+
+        # 앱 테마(다크/라이트)에 맞춰 차트 글자색 동적 설정
+        chart_text_color = "#eeeeee" if st.session_state.dark_mode else "#1a1a2e"
 
         # ── 상단 요약 카드 ────────────────────────────────────────
         c1, c2, c3 = st.columns(3)
@@ -785,42 +788,52 @@ with tab_analysis:
 
         st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
 
-        # ── 1) 시간대 패턴 차트 ─────────────────────
-        st.markdown("#### ⏰ 추천 시간대 패턴 (시간대별 채택 횟수)")
-        hour_cnt = Counter(h.get("hour", 12) for h in hist)
-        time_slots = {
-            "아침(6-9시)":   list(range(6, 10)),
-            "점심(10-14시)": list(range(10, 15)),
-            "오후(15-17시)": list(range(15, 18)),
-            "저녁(18-21시)": list(range(18, 22)),
-            "야식(22-5시)":   list(range(22, 24)) + list(range(0, 6)),
-        }
-        
-        time_chart_data = {slot: sum(hour_cnt.get(h, 0) for h in hours) for slot, hours in time_slots.items()}
-        st.bar_chart(time_chart_data, color="#667eea")
-
-        st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
-
         # ── 2) 음식 종류 비율 & 카테고리 비율 ─────────────────
         ch_col1, ch_col2 = st.columns(2)
         
         with ch_col1:
             st.markdown("#### 🥦 음식 종류 비율")
             type_cnt = Counter(h.get("food_type", "기타") for h in hist)
-            st.bar_chart(type_cnt, color="#43e97b")
+            df_type = pd.DataFrame([{"종류": k, "횟수": v} for k, v in type_cnt.items()])
+            
+            # 글씨 완전 가로로 눕히기 (labelAngle=0)
+            type_chart = alt.Chart(df_type).mark_bar(color="#43e97b", cornerRadiusTopLeft=6, cornerRadiusTopRight=6).encode(
+                x=alt.X('종류', sort='-y', axis=alt.Axis(labelAngle=0, labelColor=chart_text_color, title=None, labelFontSize=13)),
+                y=alt.Y('횟수', axis=alt.Axis(labelColor=chart_text_color, title=None, tickMinStep=1, labelFontSize=12)),
+                tooltip=['종류', '횟수']
+            ).properties(height=250)
+            st.altair_chart(type_chart, use_container_width=True)
 
         with ch_col2:
-            st.markdown("#### 🏷️ 카테고리별 채택 비율")
+            st.markdown("#### 🏷️ 카테고리 비율")
             cat_cnt = Counter(h["cat"].replace(" 메뉴", "") for h in hist)
-            st.bar_chart(cat_cnt, color="#f093fb")
+            df_cat = pd.DataFrame([{"카테고리": k, "횟수": v} for k, v in cat_cnt.items()])
+            
+            # 글씨 대각선으로 예쁘게 눕히기 (labelAngle=-45)
+            cat_chart = alt.Chart(df_cat).mark_bar(color="#f093fb", cornerRadiusTopLeft=6, cornerRadiusTopRight=6).encode(
+                x=alt.X('카테고리', sort='-y', axis=alt.Axis(labelAngle=-45, labelColor=chart_text_color, title=None, labelFontSize=13, labelLimit=200)),
+                y=alt.Y('횟수', axis=alt.Axis(labelColor=chart_text_color, title=None, tickMinStep=1, labelFontSize=12)),
+                tooltip=['카테고리', '횟수']
+            ).properties(height=250)
+            st.altair_chart(cat_chart, use_container_width=True)
 
         st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
 
         # ── 3) 최근 10회 칼로리 추이 ────────────────────
         st.markdown(f"#### 📈 최근 칼로리 추이 (평균: {avg_cal} kcal)")
         recent10 = list(reversed(hist[:10]))
-        trend_data = {f"{h['emoji']} {h['menu']}": h['cal'] for h in recent10}
-        st.line_chart(trend_data, color="#f5576c")
+        df_trend = pd.DataFrame([{"메뉴": f"{h['emoji']} {h['menu']}", "칼로리": h['cal']} for h in recent10])
+        
+        # 긴 메뉴 이름 대각선으로 눕히고 잘리지 않게 설정 (labelAngle=-45, labelLimit=500)
+        trend_chart = alt.Chart(df_trend).mark_line(point=True, color="#f5576c", strokeWidth=3).encode(
+            x=alt.X('메뉴', sort=None, axis=alt.Axis(labelAngle=-45, labelColor=chart_text_color, title=None, labelFontSize=13, labelLimit=500)),
+            y=alt.Y('칼로리', axis=alt.Axis(labelColor=chart_text_color, title="kcal", labelFontSize=12)),
+            tooltip=['메뉴', '칼로리']
+        ).properties(height=300)
+        
+        # 평균선 추가
+        rule = alt.Chart(pd.DataFrame({'평균': [avg_cal]})).mark_rule(color="#667eea", strokeDash=[5, 5]).encode(y='평균')
+        st.altair_chart(trend_chart + rule, use_container_width=True)
 
         st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
 
@@ -836,17 +849,6 @@ with tab_analysis:
                 </div>
             </div>
             <div style="flex: 1; background: {'#2a2a2a' if st.session_state.dark_mode else '#fff'}; padding: 14px 16px; border-radius: 16px; box-shadow: 0 3px 12px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 12px;">
-                <div style="font-size: 2rem; line-height: 1;">🥗</div>
-                <div>
-                    <div style="font-size: .75rem; color: #888; margin-bottom: 2px;">최저 칼로리</div>
-                    <div style="font-size: .95rem; font-weight: 800;">{min_cal_entry['emoji']} {min_cal_entry['menu']}</div>
-                    <div style="font-size: .85rem; font-weight: 700; color: #43e97b; margin-top: 2px;">{min_cal_entry['cal']} kcal</div>
-                </div>
-            </div>
-        </div>""", unsafe_allow_html=True)
-
-    else:
-        st.info("📊 분석을 위해 메뉴를 3회 이상 채택해보세요!")
 
 with tab_feed:
     st.markdown("### 💡 추천 피드")
