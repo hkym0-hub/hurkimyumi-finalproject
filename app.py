@@ -747,7 +747,7 @@ with tab_rank:
     else:
         st.info("채택한 메뉴가 쌓이면 랭킹이 표시돼요!")
 
-# ── 📊 식습관 분석 탭 (차트 버전) ────────────────────────────────
+# ── 📊 식습관 분석 탭 (순수 스트림릿 차트 버전으로 수정) ────────────────
 with tab_analysis:
     st.markdown("### 📊 나의 식습관 분석")
     if len(st.session_state.history) >= 3:
@@ -781,286 +781,67 @@ with tab_analysis:
                 <div style="font-size:1.8rem;font-weight:900;color:#43e97b">{top_type}</div>
             </div>""", unsafe_allow_html=True)
 
-        st.markdown("<div style='height:.6rem'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
 
-        # ── 차트 데이터 준비 ──────────────────────────────────────
-        # 1) 시간대 패턴
+        # ── 1) 시간대 패턴 차트 ─────────────────────
+        st.markdown("#### ⏰ 추천 시간대 패턴 (시간대별 채택 횟수)")
         hour_cnt = Counter(h.get("hour", 12) for h in hist)
         time_slots = {
             "아침(6-9시)":   list(range(6, 10)),
             "점심(10-14시)": list(range(10, 15)),
             "오후(15-17시)": list(range(15, 18)),
             "저녁(18-21시)": list(range(18, 22)),
-            "야식(22-5시)":  list(range(22, 24)) + list(range(0, 6)),
+            "야식(22-5시)":   list(range(22, 24)) + list(range(0, 6)),
         }
-        time_data = [
-            {"slot": slot, "count": sum(hour_cnt.get(h, 0) for h in hours)}
-            for slot, hours in time_slots.items()
-        ]
+        
+        time_chart_data = {slot: sum(hour_cnt.get(h, 0) for h in hours) for slot, hours in time_slots.items()}
+        st.bar_chart(time_chart_data, color="#667eea")
 
-        # 2) 음식 종류 도넛
-        type_cnt = Counter(h.get("food_type", "기타") for h in hist)
-        type_colors_map = {"밥": "#667eea", "면": "#f093fb", "고기": "#f5576c", "기타": "#43e97b"}
-        type_data = [
-            {"name": k, "value": v, "color": type_colors_map.get(k, "#aaa")}
-            for k, v in type_cnt.items()
-        ]
+        st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
 
-        # 3) 카테고리별 채택 횟수 (상위 6개)
-        cat_cnt = Counter(h["cat"] for h in hist)
-        cat_data = [
-            {"cat": k.replace(" 메뉴", ""), "count": v}
-            for k, v in cat_cnt.most_common(6)
-        ]
+        # ── 2) 음식 종류 비율 & 카테고리 비율 ─────────────────
+        ch_col1, ch_col2 = st.columns(2)
+        
+        with ch_col1:
+            st.markdown("#### 🥦 음식 종류 비율")
+            type_cnt = Counter(h.get("food_type", "기타") for h in hist)
+            st.bar_chart(type_cnt, color="#43e97b")
 
-        # 4) 최근 10회 칼로리 추이
+        with ch_col2:
+            st.markdown("#### 🏷️ 카테고리별 채택 비율")
+            cat_cnt = Counter(h["cat"].replace(" 메뉴", "") for h in hist)
+            st.bar_chart(cat_cnt, color="#f093fb")
+
+        st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
+
+        # ── 3) 최근 10회 칼로리 추이 ────────────────────
+        st.markdown(f"#### 📈 최근 칼로리 추이 (평균: {avg_cal} kcal)")
         recent10 = list(reversed(hist[:10]))
-        cal_trend = [
-            {"name": h["emoji"] + " " + (h["menu"][:4] + "…" if len(h["menu"]) > 4 else h["menu"]),
-             "cal": h["cal"]}
-            for h in recent10
-        ]
+        trend_data = {f"{h['emoji']} {h['menu']}": h['cal'] for h in recent10}
+        st.line_chart(trend_data, color="#f5576c")
 
-        # 5) 칼로리 기록 (최고/최저)
-        is_dark_mode = st.session_state.dark_mode
+        st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
 
-        time_json  = json.dumps(time_data,  ensure_ascii=False)
-        type_json  = json.dumps(type_data,  ensure_ascii=False)
-        cat_json   = json.dumps(cat_data,   ensure_ascii=False)
-        trend_json = json.dumps(cal_trend,  ensure_ascii=False)
-        avg_cal_js = avg_cal
-        bg_color   = "#1e1e1e" if is_dark_mode else "#ffffff"
-        text_color = "#eeeeee" if is_dark_mode else "#1a1a2e"
-        subtext    = "#aaaaaa" if is_dark_mode else "#888888"
-        card_bg    = "#2a2a2a" if is_dark_mode else "#f8f9ff"
-
-        chart_html = f"""<!DOCTYPE html>
-<html><head><meta charset="utf-8">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;900&display=swap" rel="stylesheet">
-<style>
-  * {{ margin:0; padding:0; box-sizing:border-box; }}
-  body {{
-    background: transparent;
-    font-family: 'Noto Sans KR', sans-serif;
-    padding: 4px 2px 12px;
-    color: {text_color};
-  }}
-  .section-label {{
-    font-size: .82rem;
-    font-weight: 800;
-    color: {subtext};
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    margin: 20px 0 8px 2px;
-    padding-left: 10px;
-    border-left: 3px solid #667eea;
-  }}
-  .charts-grid-2 {{
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-    margin-bottom: 4px;
-  }}
-  .chart-card {{
-    background: {card_bg};
-    border-radius: 16px;
-    padding: 16px 14px 10px;
-    box-shadow: 0 3px 12px rgba(0,0,0,{'.18' if is_dark_mode else '.06'});
-  }}
-  .chart-title {{
-    font-size: .8rem;
-    font-weight: 700;
-    color: {subtext};
-    margin-bottom: 10px;
-  }}
-  .record-row {{
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-    margin-top: 4px;
-  }}
-  .record-card {{
-    background: {card_bg};
-    border-radius: 16px;
-    padding: 14px 16px;
-    box-shadow: 0 3px 12px rgba(0,0,0,{'.18' if is_dark_mode else '.06'});
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }}
-  .record-icon {{ font-size: 2rem; line-height: 1; }}
-  .record-label {{ font-size: .75rem; color: {subtext}; margin-bottom: 2px; }}
-  .record-name {{ font-size: .95rem; font-weight: 800; color: {text_color}; }}
-  .record-cal {{ font-size: .85rem; font-weight: 700; margin-top: 2px; }}
-</style>
-</head>
-<body>
-<div id="root"></div>
-<script>
-const {{ BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
-         XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-         ReferenceLine, Area, AreaChart }} = Recharts;
-const e = React.createElement;
-
-const TIME_DATA  = {time_json};
-const TYPE_DATA  = {type_json};
-const CAT_DATA   = {cat_json};
-const TREND_DATA = {trend_json};
-const AVG_CAL    = {avg_cal_js};
-const IS_DARK    = {"true" if is_dark_mode else "false"};
-
-const PALETTE = ["#667eea","#f093fb","#f5576c","#4facfe","#43e97b","#fee140","#fa709a","#a18cd1"];
-const AXIS_COLOR = IS_DARK ? "#666" : "#ccc";
-const TICK_COLOR = IS_DARK ? "#aaa" : "#888";
-const GRID_COLOR = IS_DARK ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)";
-const TT_STYLE   = {{
-  borderRadius: "10px", fontSize: "13px", fontFamily: "Noto Sans KR",
-  background: IS_DARK ? "#2a2a2a" : "#fff",
-  border: IS_DARK ? "1px solid #444" : "1px solid #eee",
-  color: IS_DARK ? "#eee" : "#1a1a2e"
-}};
-
-function ChartApp() {{
-  return e('div', null,
-
-    // ── 1. 시간대 패턴 (가로 전체 바 차트) ─────────────────────
-    e('div', {{className:'section-label'}}, '⏰ 추천 시간대 패턴'),
-    e('div', {{className:'chart-card'}},
-      e('div', {{className:'chart-title'}}, '시간대별 채택 횟수'),
-      e(ResponsiveContainer, {{width:'100%', height:180}},
-        e(BarChart, {{data:TIME_DATA, margin:{{top:6,right:16,bottom:2,left:-8}}}},
-          e(CartesianGrid, {{strokeDasharray:'3 3', stroke:GRID_COLOR, vertical:false}}),
-          e(XAxis, {{dataKey:'slot', tick:{{fontSize:11, fill:TICK_COLOR}}, tickLine:false, axisLine:{{stroke:AXIS_COLOR}}}}),
-          e(YAxis, {{allowDecimals:false, tick:{{fontSize:11, fill:TICK_COLOR}}, tickLine:false, axisLine:false, width:20}}),
-          e(Tooltip, {{
-            formatter:(v)=>[v+'회','횟수'],
-            contentStyle:TT_STYLE,
-            cursor:{{fill: IS_DARK ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'}}
-          }}),
-          e(Bar, {{dataKey:'count', radius:[8,8,0,0], maxBarSize:52}},
-            ...TIME_DATA.map((_,i)=>e(Cell,{{key:i, fill:PALETTE[i%PALETTE.length]}}))
-          )
-        )
-      )
-    ),
-
-    // ── 2. 음식 종류 + 카테고리 (2열) ─────────────────────────
-    e('div', {{className:'section-label'}}, '🍽️ 음식 구성'),
-    e('div', {{className:'charts-grid-2'}},
-
-      // 도넛 차트
-      e('div', {{className:'chart-card'}},
-        e('div', {{className:'chart-title'}}, '음식 종류 비율'),
-        e(ResponsiveContainer, {{width:'100%', height:200}},
-          e(PieChart, null,
-            e(Pie, {{
-              data:TYPE_DATA, cx:'50%', cy:'50%',
-              innerRadius:52, outerRadius:76,
-              dataKey:'value', paddingAngle:4,
-              label:({{name, percent}})=>`${{name}} ${{(percent*100).toFixed(0)}}%`,
-              labelLine:{{stroke: IS_DARK ? '#666':'#ccc'}},
-              style:{{fontSize:'11px', fill:TICK_COLOR, fontWeight:700}}
-            }},
-              ...TYPE_DATA.map((d,i)=>e(Cell,{{key:i, fill:d.color}}))
-            ),
-            e(Tooltip, {{
-              formatter:(v,n)=>[v+'회', n],
-              contentStyle:TT_STYLE
-            }})
-          )
-        )
-      ),
-
-      // 수평 바 차트 (카테고리)
-      e('div', {{className:'chart-card'}},
-        e('div', {{className:'chart-title'}}, '카테고리별 채택 횟수'),
-        e(ResponsiveContainer, {{width:'100%', height:200}},
-          e(BarChart, {{data:CAT_DATA, layout:'vertical', margin:{{top:4,right:20,bottom:4,left:2}}}},
-            e(CartesianGrid, {{strokeDasharray:'3 3', stroke:GRID_COLOR, horizontal:false}}),
-            e(XAxis, {{type:'number', allowDecimals:false, tick:{{fontSize:10, fill:TICK_COLOR}}, tickLine:false, axisLine:false}}),
-            e(YAxis, {{type:'category', dataKey:'cat', tick:{{fontSize:11, fill:TICK_COLOR}}, tickLine:false, axisLine:{{stroke:AXIS_COLOR}}, width:48}}),
-            e(Tooltip, {{
-              formatter:(v)=>[v+'회','횟수'],
-              contentStyle:TT_STYLE,
-              cursor:{{fill: IS_DARK ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'}}
-            }}),
-            e(Bar, {{dataKey:'count', radius:[0,8,8,0], maxBarSize:20}},
-              ...CAT_DATA.map((_,i)=>e(Cell,{{key:i, fill:PALETTE[i%PALETTE.length]}}))
-            )
-          )
-        )
-      )
-    ),
-
-    // ── 3. 칼로리 추이 (에어리어 라인 차트) ────────────────────
-    e('div', {{className:'section-label'}}, '📈 최근 칼로리 추이'),
-    e('div', {{className:'chart-card'}},
-      e('div', {{className:'chart-title'}}, '최근 채택 메뉴 칼로리 변화 (평균: ' + AVG_CAL + ' kcal)'),
-      e(ResponsiveContainer, {{width:'100%', height:200}},
-        e(AreaChart, {{data:TREND_DATA, margin:{{top:10,right:20,bottom:4,left:0}}}},
-          e('defs', null,
-            e('linearGradient', {{id:'calGrad', x1:'0', y1:'0', x2:'0', y2:'1'}},
-              e('stop', {{offset:'5%', stopColor:'#667eea', stopOpacity:0.3}}),
-              e('stop', {{offset:'95%', stopColor:'#667eea', stopOpacity:0.02}})
-            )
-          ),
-          e(CartesianGrid, {{strokeDasharray:'3 3', stroke:GRID_COLOR, vertical:false}}),
-          e(XAxis, {{dataKey:'name', tick:{{fontSize:10, fill:TICK_COLOR}}, tickLine:false, axisLine:{{stroke:AXIS_COLOR}}, interval:0}}),
-          e(YAxis, {{tick:{{fontSize:11, fill:TICK_COLOR}}, tickLine:false, axisLine:false, width:40,
-            domain:['auto','auto'],
-            tickFormatter:(v)=>v+'kcal'
-          }}),
-          e(Tooltip, {{
-            formatter:(v)=>[v+' kcal','칼로리'],
-            contentStyle:TT_STYLE
-          }}),
-          e(ReferenceLine, {{y:AVG_CAL, stroke:'#f5576c', strokeDasharray:'5 4', strokeWidth:1.5,
-            label:{{value:'평균', position:'right', fontSize:10, fill:'#f5576c'}}
-          }}),
-          e(Area, {{
-            type:'monotone', dataKey:'cal',
-            stroke:'#667eea', strokeWidth:2.5,
-            fill:'url(#calGrad)',
-            dot:{{fill:'#667eea', r:4, strokeWidth:2, stroke: IS_DARK ? '#2a2a2a':'#fff'}},
-            activeDot:{{r:6, fill:'#764ba2'}}
-          }})
-        )
-      )
-    ),
-
-    // ── 4. 칼로리 기록 카드 ────────────────────────────────────
-    e('div', {{className:'section-label'}}, '🏆 칼로리 기록'),
-    e('div', {{className:'record-row'}},
-      e('div', {{className:'record-card'}},
-        e('div', {{className:'record-icon'}}, '🔥'),
-        e('div', null,
-          e('div', {{className:'record-label'}}, '최고 칼로리'),
-          e('div', {{className:'record-name'}}, '{max_cal_entry["emoji"]} {max_cal_entry["menu"]}'),
-          e('div', {{className:'record-cal', style:{{color:'#f5576c'}}}}, '{max_cal_entry["cal"]} kcal')
-        )
-      ),
-      e('div', {{className:'record-card'}},
-        e('div', {{className:'record-icon'}}, '🥗'),
-        e('div', null,
-          e('div', {{className:'record-label'}}, '최저 칼로리'),
-          e('div', {{className:'record-name'}}, '{min_cal_entry["emoji"]} {min_cal_entry["menu"]}'),
-          e('div', {{className:'record-cal', style:{{color:'#43e97b'}}}}, '{min_cal_entry["cal"]} kcal')
-        )
-      )
-    )
-
-  );
-}}
-
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(e(ChartApp, null));
-</script>
-</body></html>"""
-
-        components.html(chart_html, height=960, scrolling=False)
+        # ── 4) 칼로리 최고/최저 기록 카드 ────────────────────────────────────
+        st.markdown("#### 🏆 칼로리 기록")
+        st.markdown(f"""<div style="display: flex; gap: 14px; margin-top: 4px;">
+            <div style="flex: 1; background: {'#2a2a2a' if st.session_state.dark_mode else '#fff'}; padding: 14px 16px; border-radius: 16px; box-shadow: 0 3px 12px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 12px;">
+                <div style="font-size: 2rem; line-height: 1;">🔥</div>
+                <div>
+                    <div style="font-size: .75rem; color: #888; margin-bottom: 2px;">최고 칼로리</div>
+                    <div style="font-size: .95rem; font-weight: 800;">{max_cal_entry['emoji']} {max_cal_entry['menu']}</div>
+                    <div style="font-size: .85rem; font-weight: 700; color: #f5576c; margin-top: 2px;">{max_cal_entry['cal']} kcal</div>
+                </div>
+            </div>
+            <div style="flex: 1; background: {'#2a2a2a' if st.session_state.dark_mode else '#fff'}; padding: 14px 16px; border-radius: 16px; box-shadow: 0 3px 12px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 12px;">
+                <div style="font-size: 2rem; line-height: 1;">🥗</div>
+                <div>
+                    <div style="font-size: .75rem; color: #888; margin-bottom: 2px;">최저 칼로리</div>
+                    <div style="font-size: .95rem; font-weight: 800;">{min_cal_entry['emoji']} {min_cal_entry['menu']}</div>
+                    <div style="font-size: .85rem; font-weight: 700; color: #43e97b; margin-top: 2px;">{min_cal_entry['cal']} kcal</div>
+                </div>
+            </div>
+        </div>""", unsafe_allow_html=True)
 
     else:
         st.info("📊 분석을 위해 메뉴를 3회 이상 채택해보세요!")
