@@ -749,6 +749,7 @@ with tab_rank:
     else:
         st.info("채택한 메뉴가 쌓이면 랭킹이 표시돼요!")
 
+
 # ── 📊 식습관 분석 탭 (Altair 적용: 글씨 눕히기 버전) ────────────────────────────────
 with tab_analysis:
     st.markdown("### 📊 나의 식습관 분석")
@@ -849,6 +850,17 @@ with tab_analysis:
                 </div>
             </div>
             <div style="flex: 1; background: {'#2a2a2a' if st.session_state.dark_mode else '#fff'}; padding: 14px 16px; border-radius: 16px; box-shadow: 0 3px 12px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 12px;">
+                <div style="font-size: 2rem; line-height: 1;">🥗</div>
+                <div>
+                    <div style="font-size: .75rem; color: #888; margin-bottom: 2px;">최저 칼로리</div>
+                    <div style="font-size: .95rem; font-weight: 800;">{min_cal_entry['emoji']} {min_cal_entry['menu']}</div>
+                    <div style="font-size: .85rem; font-weight: 700; color: #43e97b; margin-top: 2px;">{min_cal_entry['cal']} kcal</div>
+                </div>
+            </div>
+        </div>""", unsafe_allow_html=True)
+
+    else:
+        st.info("📊 분석을 위해 메뉴를 3회 이상 채택해보세요!")
 
 with tab_feed:
     st.markdown("### 💡 추천 피드")
