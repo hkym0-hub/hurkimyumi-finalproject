@@ -22,13 +22,14 @@ def fetch_kcal_from_api(food_name: str) -> int | None:
     """
     if not FOOD_API_KEY:
         return None
-    url = "https://apis.data.go.kr/1471000/FoodNtrCpntDbInfo02
-        "serviceKey": FOOD_API_KEY,
-        "food_nm": food_name,
-        "type": "json",
-        "pageNo": 1,
-        "numOfRows": 5,
-    }
+   url = "https://apis.data.go.kr/1471000/FoodNtrCpntDbInfo01/getFoodNtrCpntDbInq01"
+params = {
+    "serviceKey": FOOD_API_KEY,
+    "desc_kor": food_name,
+    "type": "json",
+    "pageNo": 1,
+    "numOfRows": 5,
+}
     try:
         res = requests.get(url, params=params, timeout=5)
         data = res.json()
