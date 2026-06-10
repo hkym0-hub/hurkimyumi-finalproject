@@ -11,7 +11,7 @@ import json
 st.set_page_config(page_title="오늘의 추천 메뉴", page_icon="🍽️", layout="wide", initial_sidebar_state="collapsed")
 
 # ── API 키 로드 ────────────────────────────────────────────────
-FOOD_API_KEY = st.secrets.get("FOOD_API_KEY", "")
+FOOD_API_KEY = secrets.get("FOOD_API_KEY", "")
 
 # ── 식품영양성분 API 호출 함수 ─────────────────────────────────
 @st.cache_data(ttl=86400, show_spinner=False)
