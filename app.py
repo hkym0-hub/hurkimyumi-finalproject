@@ -6,6 +6,8 @@ import os
 from datetime import datetime, date
 from collections import Counter, defaultdict
 import json
+import pandas as pd
+import altair as alt
 
 st.set_page_config(page_title="오늘의 추천 메뉴", page_icon="🍽️", layout="wide", initial_sidebar_state="collapsed")
 
