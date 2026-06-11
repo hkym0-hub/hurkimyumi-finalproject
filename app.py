@@ -71,7 +71,7 @@ FORTUNES = [
     ("누군가와 함께하고 싶은 날 🤝", "여럿이 나눠 먹기 좋은 메뉴로!"),
 ]
 
-# ── 엑셀(XLSX) 파일 연동 및 상세 메뉴 자동 확장 ────────────────────
+# ── 엑셀 및 CSV 파일 연동 (상세 메뉴 자동 확장) ────────────────────
 @st.cache_data(show_spinner=False)
 def load_calories_from_excel():
     excel_file = "Menu_Calories_Data.xlsx"
@@ -87,17 +87,18 @@ def load_calories_from_excel():
     return cal_dict
 
 @st.cache_data(show_spinner=False)
-def load_detailed_menus_from_excel():
-    excel_file = "Detailed_Menu_Data.xlsx"
+def load_detailed_menus_from_csv():
+    csv_file = "Detailed_Menu_Data.csv"
     detailed_menus = []
-    if os.path.exists(excel_file):
+    if os.path.exists(csv_file):
         try:
-            df = pd.read_excel(excel_file, engine="openpyxl")
-            for _, row in df.iterrows():
-                detailed_menus.append({
-                    "name": str(row['메뉴명']).strip(),
-                    "cal": int(row['칼로리(kcal)']) if pd.notna(row['칼로리(kcal)']) else 0
-                })
+            df = pd.read_csv(csv_file, encoding="utf-8-sig")
+            if '메뉴명' in df.columns and '칼로리(kcal)' in df.columns:
+                for _, row in df.iterrows():
+                    detailed_menus.append({
+                        "name": str(row['메뉴명']).strip(),
+                        "cal": int(row['칼로리(kcal)']) if pd.notna(row['칼로리(kcal)']) else 0
+                    })
         except Exception:
             pass
     return detailed_menus
@@ -111,7 +112,7 @@ if excel_data:
                 item['cal'] = excel_data[item['name']]
 
 # 2. 구체적인 파생 메뉴(참치김밥 등)를 기존 메뉴(김밥)의 속성을 상속받아 카테고리에 동적 추가
-detailed_data = load_detailed_menus_from_excel()
+detailed_data = load_detailed_menus_from_csv()
 if detailed_data:
     for category, item_list in MENU_DATA.items():
         generic_items = list(item_list) 
@@ -149,7 +150,7 @@ def init():
         "today_log": saved_data.get("today_log", []),
         "fortune_today": None, "fortune_date": None,
         "tarot_cards": None, "tarot_chosen": None,
-        "filter_cal_min": 0, "filter_cal_max": 1200,
+        "filter_cal_min": 0, "filter_cal_max": 3000,
         "filter_food_type": "전체", "filter_budget": "전체",
         "roulette_done": False, "roulette_winner": None,
         "roulette_winner_idx": 0,
@@ -450,7 +451,7 @@ st.markdown(f"""<div class="fortune-card">
 with st.expander("🔍 조건 필터", expanded=False):
     fc1, fc2, fc3 = st.columns(3)
     with fc1:
-        cal_range = st.slider("🔥 칼로리 범위 (kcal)", 0, 1200,
+        cal_range = st.slider("🔥 칼로리 범위 (kcal)", 0, 3000,
                               (st.session_state.filter_cal_min, st.session_state.filter_cal_max), 50)
         st.session_state.filter_cal_min, st.session_state.filter_cal_max = cal_range
     with fc2:
@@ -467,7 +468,7 @@ with st.expander("🔍 조건 필터", expanded=False):
     if filtered_count < total_count:
         st.info(f"필터 적용 중: {total_count}개 → **{filtered_count}개** 메뉴 (필터 결과가 0개면 전체 표시)")
     if st.button("🔄 필터 초기화"):
-        st.session_state.filter_cal_min = 0; st.session_state.filter_cal_max = 1200
+        st.session_state.filter_cal_min = 0; st.session_state.filter_cal_max = 3000
         st.session_state.filter_food_type = "전체"
         st.session_state.filter_budget = "전체"; st.rerun()
 
@@ -1003,7 +1004,7 @@ with tab_analysis:
             st.altair_chart(cat_chart, use_container_width=True)
 
         st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
-        st.markdown(f"#### 📈 최근 칼로리 추이 (평균: {avg_cal} kcal)")
+        st.markdown(f"#### 📈 최근 칼로 추이 (평균: {avg_cal} kcal)")
         recent10 = list(reversed(hist[:10]))
         df_trend = pd.DataFrame([{"메뉴": f"{h['emoji']} {h['menu']}", "칼로리": h['cal']} for h in recent10])
         trend_chart = alt.Chart(df_trend).mark_line(point=True, color="#f5576c", strokeWidth=3).encode(
