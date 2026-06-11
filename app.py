@@ -528,6 +528,17 @@ button[role="tab"], button[role="tab"] p, button[role="tab"] span { color: #eee 
 /* 다크모드 카드 스타일 오버라이드 */
 .menu-card { background: #1e1e1e !important; box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important; border: 1px solid #333 !important; }
 .menu-card-title { color: #eee !important; }
+
+/* 🚨 추가된 부분: 추천 피드의 st.code 및 알림창(st.info 등) 하얀색 배경 완벽 제거 */
+[data-testid="stCodeBlock"] { background-color: #1e1e1e !important; border: 1px solid #333 !important; }
+[data-testid="stCodeBlock"] div, [data-testid="stCodeBlock"] pre, [data-testid="stCodeBlock"] code { background-color: transparent !important; color: #a1c4fd !important; }
+[data-testid="stAlert"] { background-color: #1e1e1e !important; border: 1px solid #333 !important; }
+[data-testid="stAlert"] * { color: #eee !important; }
+
+/* 입력폼 및 선택창 다크모드 대응 */
+div[data-baseweb="select"] > div, div[data-baseweb="base-input"] { background-color: #1e1e1e !important; border-color: #444 !important; }
+div[data-baseweb="select"] * { color: #eee !important; }
+input { background-color: #1e1e1e !important; color: #eee !important; }
 </style>
 """
 
