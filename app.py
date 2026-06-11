@@ -35,6 +35,7 @@ def save_data():
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 # ── 데이터 ────────────────────────────────────────────────────
+# 🔥 카테고리 이모지 복구 완료
 CATEGORY_EMOJI = {
     "저녁 메뉴":"🌙","배달 메뉴":"🛵","데이트 메뉴":"🥂","다이어트 메뉴":"🥗",
     "가성비 메뉴":"💸","캠핑 메뉴":"🏕️","매운 메뉴":"🌶️","파티 메뉴":"🎉",
@@ -42,34 +43,23 @@ CATEGORY_EMOJI = {
     "안주 메뉴":"🍻","혼자 먹는 메뉴":"🎧",
 }
 
-# 🔥 에러 해결 부분: CATEGORY_EMOJI에서 카테고리 목록을 먼저 만듭니다.
-CATEGORIES = list(CATEGORY_EMOJI.keys())
-
-# 각 음식별 맞춤 이모지 사전
-MENU_EMOJI_MAP = {
-    "삼겹살": "🥓", "치킨": "🍗", "피자": "🍕", "파스타": "🍝", "스테이크": "🥩",
-    "초밥": "🍣", "스시": "🍣", "된장찌개": "🍲", "갈비탕": "🍲", "불고기": "🥩", 
-    "쭈꾸미": "🐙", "낙지": "🐙", "순두부": "🍲", "찌개": "🍲", "부대찌개": "🍲", 
-    "곱창": "🥘", "닭갈비": "🥘", "짜장면": "🍜", "짬뽕": "🍜", "떡볶이": "🥘", 
-    "족발": "🍖", "보쌈": "🍖", "버거": "🍔", "마라탕": "🍲", "국밥": "🥣", 
-    "쌀국수": "🍜", "감자탕": "🍲", "샌드위치": "🥪", "오마카세": "🍣", "샤브샤브": "🍲", 
-    "리조또": "🍛", "타파스": "🧆", "훠궈": "🍲", "뷔페": "🍽️", "샐러드": "🥗", 
-    "비빔밥": "🍚", "요거트": "🥣", "스프": "🥣", "수프": "🥣", "포케": "🥗", 
-    "도시락": "🍱", "오트밀": "🥣", "김밥": "🍙", "쌈밥": "🥬", "라면": "🍜", 
-    "백반": "🍚", "해장국": "🍲", "돈까스": "🍛", "돈카츠": "🍛", "제육": "🥩", 
-    "칼국수": "🍜", "핫도그": "🌭", "옥수수": "🌽", "감자": "🥔", "닭꼬치": "🍢", 
-    "소시지": "🌭", "어묵": "🍢", "스팸": "🥫", "볶음면": "🍝", "갈비찜": "🍖", 
-    "해물탕": "🥘", "타코": "🌮", "나초": "🌮", "케이크": "🍰", "삼계탕": "🍲", 
-    "파전": "🥞", "잡채": "🍝", "떡국": "🥣", "우동": "🍜", "오야코동": "🍛", 
-    "규동": "🍛", "야키토리": "🍢", "카레": "🍛", "소바": "🍜", "그라탱": "🥘", 
-    "탕수육": "🍖", "마파두부": "🍲", "딤섬": "🥟", "꿔바로우": "🍖", "양꼬치": "🍢", 
-    "깐풍기": "🍗", "유린기": "🍗", "동파육": "🍖", "두부김치": "🥢", "골뱅이": "🐌", 
-    "닭발": "🐔", "계란말이": "🍳", "오돌뼈": "🍖", "덮밥": "🍛", "고기": "🥩",
-    "빵": "🍞", "디저트": "🍨", "아이스크림": "🍦", "회": "🐟", "냉면": "🍜"
+MENU_DATA = {
+    "저녁 메뉴": [{"name":"삼겹살","cal":700,"emoji":"🌙","food_type":"고기","delivery":False,"budget":"중"},{"name":"치킨","cal":850,"emoji":"🌙","food_type":"고기","delivery":True,"budget":"중"},{"name":"피자","cal":900,"emoji":"🌙","food_type":"기타","delivery":True,"budget":"중"},{"name":"파스타","cal":650,"emoji":"🌙","food_type":"면","delivery":True,"budget":"중"},{"name":"스테이크","cal":800,"emoji":"🌙","food_type":"고기","delivery":False,"budget":"고"},{"name":"초밥","cal":500,"emoji":"🌙","food_type":"기타","delivery":True,"budget":"고"},{"name":"된장찌개","cal":350,"emoji":"🌙","food_type":"밥","delivery":False,"budget":"저"},{"name":"갈비탕","cal":600,"emoji":"🌙","food_type":"고기","delivery":False,"budget":"중"},{"name":"불고기","cal":550,"emoji":"🌙","food_type":"고기","delivery":False,"budget":"중"},{"name":"쭈꾸미볶음","cal":450,"emoji":"🌙","food_type":"기타","delivery":True,"budget":"저"},{"name":"순두부찌개","cal":300,"emoji":"🌙","food_type":"밥","delivery":False,"budget":"저"},{"name":"부대찌개","cal":650,"emoji":"🌙","food_type":"밥","delivery":False,"budget":"저"},{"name":"곱창전골","cal":700,"emoji":"🌙","food_type":"고기","delivery":False,"budget":"중"},{"name":"닭갈비","cal":580,"emoji":"🌙","food_type":"고기","delivery":True,"budget":"저"}],
+    "배달 메뉴": [{"name":"치킨","cal":850,"emoji":"🛵","food_type":"고기","delivery":True,"budget":"중"},{"name":"피자","cal":900,"emoji":"🛵","food_type":"기타","delivery":True,"budget":"중"},{"name":"짜장면","cal":650,"emoji":"🛵","food_type":"면","delivery":True,"budget":"저"},{"name":"짬뽕","cal":700,"emoji":"🛵","food_type":"면","delivery":True,"budget":"저"},{"name":"떡볶이","cal":500,"emoji":"🛵","food_type":"기타","delivery":True,"budget":"저"},{"name":"족발","cal":750,"emoji":"🛵","food_type":"고기","delivery":True,"budget":"중"},{"name":"버거","cal":650,"emoji":"🛵","food_type":"기타","delivery":True,"budget":"저"},{"name":"마라탕","cal":700,"emoji":"🛵","food_type":"기타","delivery":True,"budget":"중"},{"name":"초밥 세트","cal":520,"emoji":"🛵","food_type":"기타","delivery":True,"budget":"고"},{"name":"국밥","cal":550,"emoji":"🛵","food_type":"밥","delivery":True,"budget":"저"},{"name":"쌀국수","cal":480,"emoji":"🛵","food_type":"면","delivery":True,"budget":"저"},{"name":"보쌈","cal":680,"emoji":"🛵","food_type":"고기","delivery":True,"budget":"중"},{"name":"감자탕","cal":620,"emoji":"🛵","food_type":"고기","delivery":True,"budget":"저"},{"name":"샌드위치","cal":450,"emoji":"🛵","food_type":"기타","delivery":True,"budget":"저"}],
+    "데이트 메뉴": [{"name":"파스타","cal":650,"emoji":"🥂","food_type":"면","delivery":False,"budget":"중"},{"name":"스테이크","cal":800,"emoji":"🥂","food_type":"고기","delivery":False,"budget":"고"},{"name":"초밥 / 오마카세","cal":600,"emoji":"🥂","food_type":"기타","delivery":False,"budget":"고"},{"name":"샤브샤브","cal":450,"emoji":"🥂","food_type":"기타","delivery":False,"budget":"고"},{"name":"와인 파스타","cal":700,"emoji":"🥂","food_type":"면","delivery":False,"budget":"고"},{"name":"리조또","cal":620,"emoji":"🥂","food_type":"밥","delivery":False,"budget":"고"},{"name":"프렌치 코스","cal":900,"emoji":"🥂","food_type":"기타","delivery":False,"budget":"고"},{"name":"타파스","cal":500,"emoji":"🥂","food_type":"기타","delivery":False,"budget":"고"},{"name":"훠궈","cal":750,"emoji":"🥂","food_type":"기타","delivery":False,"budget":"중"},{"name":"브런치 카페","cal":550,"emoji":"🥂","food_type":"기타","delivery":False,"budget":"중"},{"name":"이탈리안 뷔페","cal":850,"emoji":"🥂","food_type":"기타","delivery":False,"budget":"고"},{"name":"스시 오마카세","cal":700,"emoji":"🥂","food_type":"기타","delivery":False,"budget":"고"}],
+    "다이어트 메뉴": [{"name":"닭가슴살 샐러드","cal":280,"emoji":"🥗","food_type":"기타","delivery":True,"budget":"저"},{"name":"두부 스테이크","cal":200,"emoji":"🥗","food_type":"기타","delivery":False,"budget":"저"},{"name":"곤약 비빔밥","cal":250,"emoji":"🥗","food_type":"밥","delivery":False,"budget":"저"},{"name":"그릭 요거트 볼","cal":180,"emoji":"🥗","food_type":"기타","delivery":False,"budget":"저"},{"name":"채소 스프","cal":120,"emoji":"🥗","food_type":"기타","delivery":False,"budget":"저"},{"name":"연어 포케","cal":380,"emoji":"🥗","food_type":"기타","delivery":True,"budget":"중"},{"name":"닭가슴살 도시락","cal":300,"emoji":"🥗","food_type":"고기","delivery":True,"budget":"저"},{"name":"오트밀 볼","cal":220,"emoji":"🥗","food_type":"기타","delivery":False,"budget":"저"},{"name":"현미 잡곡밥 정식","cal":420,"emoji":"🥗","food_type":"밥","delivery":False,"budget":"저"},{"name":"저칼로리 김밥","cal":320,"emoji":"🥗","food_type":"기타","delivery":True,"budget":"저"},{"name":"채소 쌈밥","cal":350,"emoji":"🥗","food_type":"밥","delivery":False,"budget":"저"},{"name":"토마토 달걀볶음","cal":200,"emoji":"🥗","food_type":"기타","delivery":False,"budget":"저"},{"name":"닭가슴살 볶음밥","cal":380,"emoji":"🥗","food_type":"밥","delivery":True,"budget":"저"}],
+    "가성비 메뉴": [{"name":"김밥","cal":400,"emoji":"💸","food_type":"기타","delivery":True,"budget":"저"},{"name":"순대국밥","cal":550,"emoji":"💸","food_type":"밥","delivery":False,"budget":"저"},{"name":"라면","cal":500,"emoji":"💸","food_type":"면","delivery":True,"budget":"저"},{"name":"백반","cal":650,"emoji":"💸","food_type":"밥","delivery":False,"budget":"저"},{"name":"편의점 도시락","cal":550,"emoji":"💸","food_type":"밥","delivery":False,"budget":"저"},{"name":"분식 세트","cal":600,"emoji":"💸","food_type":"기타","delivery":True,"budget":"저"},{"name":"컵라면 + 삼각김밥","cal":450,"emoji":"💸","food_type":"면","delivery":False,"budget":"저"},{"name":"뼈다귀해장국","cal":500,"emoji":"💸","food_type":"밥","delivery":False,"budget":"저"},{"name":"돈까스 정식","cal":700,"emoji":"💸","food_type":"고기","delivery":True,"budget":"저"},{"name":"제육볶음 백반","cal":650,"emoji":"💸","food_type":"밥","delivery":True,"budget":"저"},{"name":"칼국수","cal":520,"emoji":"💸","food_type":"면","delivery":False,"budget":"저"},{"name":"콩나물국밥","cal":400,"emoji":"💸","food_type":"밥","delivery":False,"budget":"저"},{"name":"떡볶이 + 순대","cal":580,"emoji":"💸","food_type":"기타","delivery":True,"budget":"저"}],
+    "캠핑 메뉴": [{"name":"삼겹살 구이","cal":700,"emoji":"🏕️","food_type":"고기","delivery":False,"budget":"저"},{"name":"라면","cal":500,"emoji":"🏕️","food_type":"면","delivery":False,"budget":"저"},{"name":"핫도그","cal":380,"emoji":"🏕️","food_type":"기타","delivery":False,"budget":"저"},{"name":"불고기","cal":550,"emoji":"🏕️","food_type":"고기","delivery":False,"budget":"중"},{"name":"옥수수 구이","cal":180,"emoji":"🏕️","food_type":"기타","delivery":False,"budget":"저"},{"name":"감자 구이","cal":200,"emoji":"🏕️","food_type":"기타","delivery":False,"budget":"저"},{"name":"부대찌개","cal":650,"emoji":"🏕️","food_type":"밥","delivery":False,"budget":"저"},{"name":"닭꼬치","cal":350,"emoji":"🏕️","food_type":"고기","delivery":False,"budget":"저"},{"name":"소시지 구이","cal":400,"emoji":"🏕️","food_type":"고기","delivery":False,"budget":"저"},{"name":"묵은지 삼겹","cal":720,"emoji":"🏕️","food_type":"고기","delivery":False,"budget":"중"},{"name":"즉석 떡볶이","cal":480,"emoji":"🏕️","food_type":"기타","delivery":False,"budget":"저"},{"name":"어묵탕","cal":300,"emoji":"🏕️","food_type":"기타","delivery":False,"budget":"저"},{"name":"스팸 구이","cal":450,"emoji":"🏕️","food_type":"고기","delivery":False,"budget":"저"}],
+    "매운 메뉴": [{"name":"불닭볶음면","cal":530,"emoji":"🌶️","food_type":"면","delivery":True,"budget":"저"},{"name":"마라탕","cal":700,"emoji":"🌶️","food_type":"기타","delivery":True,"budget":"중"},{"name":"엽기 떡볶이","cal":600,"emoji":"🌶️","food_type":"기타","delivery":True,"budget":"저"},{"name":"매운 김치찌개","cal":400,"emoji":"🌶️","food_type":"밥","delivery":False,"budget":"저"},{"name":"육개장","cal":350,"emoji":"🌶️","food_type":"밥","delivery":False,"budget":"저"},{"name":"마라샹궈","cal":800,"emoji":"🌶️","food_type":"기타","delivery":True,"budget":"중"},{"name":"불닭 피자","cal":950,"emoji":"🌶️","food_type":"기타","delivery":True,"budget":"중"},{"name":"매운 갈비찜","cal":750,"emoji":"🌶️","food_type":"고기","delivery":False,"budget":"중"},{"name":"낙지볶음","cal":380,"emoji":"🌶️","food_type":"기타","delivery":True,"budget":"중"},{"name":"쭈꾸미볶음","cal":420,"emoji":"🌶️","food_type":"기타","delivery":True,"budget":"저"},{"name":"매운 해물탕","cal":500,"emoji":"🌶️","food_type":"기타","delivery":False,"budget":"중"},{"name":"불족발","cal":780,"emoji":"🌶️","food_type":"고기","delivery":True,"budget":"중"},{"name":"청양 닭볶음탕","cal":600,"emoji":"🌶️","food_type":"고기","delivery":True,"budget":"저"}],
+    "파티 메뉴": [{"name":"피자","cal":900,"emoji":"🎉","food_type":"기타","delivery":True,"budget":"중"},{"name":"치킨","cal":850,"emoji":"🎉","food_type":"고기","delivery":True,"budget":"중"},{"name":"파스타 플래터","cal":700,"emoji":"🎉","food_type":"면","delivery":False,"budget":"고"},{"name":"타코","cal":550,"emoji":"🎉","food_type":"기타","delivery":False,"budget":"중"},{"name":"샌드위치 플래터","cal":600,"emoji":"🎉","food_type":"기타","delivery":True,"budget":"중"},{"name":"뷔페","cal":900,"emoji":"🎉","food_type":"기타","delivery":False,"budget":"고"},{"name":"초밥 세트","cal":560,"emoji":"🎉","food_type":"기타","delivery":True,"budget":"고"},{"name":"바비큐 플래터","cal":850,"emoji":"🎉","food_type":"고기","delivery":False,"budget":"고"},{"name":"케이터링 도시락","cal":700,"emoji":"🎉","food_type":"밥","delivery":True,"budget":"중"},{"name":"나초 + 딥","cal":500,"emoji":"🎉","food_type":"기타","delivery":False,"budget":"저"},{"name":"핑거푸드 세트","cal":450,"emoji":"🎉","food_type":"기타","delivery":False,"budget":"중"},{"name":"떡 케이크","cal":400,"emoji":"🎉","food_type":"기타","delivery":True,"budget":"중"}],
+    "한식 메뉴": [{"name":"비빔밥","cal":550,"emoji":"🍚","food_type":"밥","delivery":True,"budget":"저"},{"name":"된장찌개","cal":350,"emoji":"🍚","food_type":"밥","delivery":False,"budget":"저"},{"name":"삼겹살","cal":700,"emoji":"🍚","food_type":"고기","delivery":False,"budget":"중"},{"name":"불고기","cal":550,"emoji":"🍚","food_type":"고기","delivery":False,"budget":"중"},{"name":"냉면","cal":500,"emoji":"🍚","food_type":"면","delivery":True,"budget":"중"},{"name":"갈비탕","cal":600,"emoji":"🍚","food_type":"고기","delivery":False,"budget":"중"},{"name":"삼계탕","cal":580,"emoji":"🍚","food_type":"고기","delivery":False,"budget":"중"},{"name":"순대국밥","cal":550,"emoji":"🍚","food_type":"밥","delivery":False,"budget":"저"},{"name":"해물파전","cal":480,"emoji":"🍚","food_type":"기타","delivery":False,"budget":"저"},{"name":"잡채","cal":420,"emoji":"🍚","food_type":"면","delivery":False,"budget":"중"},{"name":"감자탕","cal":620,"emoji":"🍚","food_type":"고기","delivery":True,"budget":"저"},{"name":"보쌈","cal":680,"emoji":"🍚","food_type":"고기","delivery":True,"budget":"중"},{"name":"닭갈비","cal":580,"emoji":"🍚","food_type":"고기","delivery":True,"budget":"저"},{"name":"낙지볶음","cal":380,"emoji":"🍚","food_type":"기타","delivery":True,"budget":"중"},{"name":"떡국","cal":450,"emoji":"🍚","food_type":"밥","delivery":False,"budget":"저"}],
+    "일식 메뉴": [{"name":"초밥","cal":500,"emoji":"🍣","food_type":"기타","delivery":True,"budget":"고"},{"name":"라멘","cal":700,"emoji":"🍣","food_type":"면","delivery":True,"budget":"중"},{"name":"우동","cal":450,"emoji":"🍣","food_type":"면","delivery":True,"budget":"중"},{"name":"돈카츠","cal":750,"emoji":"🍣","food_type":"고기","delivery":True,"budget":"중"},{"name":"오야코동","cal":600,"emoji":"🍣","food_type":"밥","delivery":True,"budget":"중"},{"name":"타코야키","cal":380,"emoji":"🍣","food_type":"기타","delivery":True,"budget":"저"},{"name":"규동","cal":620,"emoji":"🍣","food_type":"밥","delivery":True,"budget":"저"},{"name":"나가사키 짬뽕","cal":680,"emoji":"🍣","food_type":"면","delivery":False,"budget":"중"},{"name":"오마카세","cal":700,"emoji":"🍣","food_type":"기타","delivery":False,"budget":"고"},{"name":"야키토리","cal":400,"emoji":"🍣","food_type":"고기","delivery":False,"budget":"중"},{"name":"카레라이스","cal":650,"emoji":"🍣","food_type":"밥","delivery":True,"budget":"저"},{"name":"소바","cal":400,"emoji":"🍣","food_type":"면","delivery":False,"budget":"중"},{"name":"이자카야 세트","cal":750,"emoji":"🍣","food_type":"기타","delivery":False,"budget":"고"}],
+    "양식 메뉴": [{"name":"파스타","cal":650,"emoji":"🍝","food_type":"면","delivery":True,"budget":"중"},{"name":"피자","cal":900,"emoji":"🍝","food_type":"기타","delivery":True,"budget":"중"},{"name":"스테이크","cal":800,"emoji":"🍝","food_type":"고기","delivery":False,"budget":"고"},{"name":"버거","cal":650,"emoji":"🍝","food_type":"기타","delivery":True,"budget":"저"},{"name":"리조또","cal":620,"emoji":"🍝","food_type":"밥","delivery":False,"budget":"고"},{"name":"샐러드","cal":250,"emoji":"🍝","food_type":"기타","delivery":True,"budget":"중"},{"name":"그라탱","cal":700,"emoji":"🍝","food_type":"기타","delivery":False,"budget":"중"},{"name":"크림 수프","cal":350,"emoji":"🍝","food_type":"기타","delivery":False,"budget":"중"},{"name":"연어 스테이크","cal":550,"emoji":"🍝","food_type":"고기","delivery":False,"budget":"고"},{"name":"브런치 플레이트","cal":600,"emoji":"🍝","food_type":"기타","delivery":False,"budget":"중"},{"name":"함박스테이크","cal":680,"emoji":"🍝","food_type":"고기","delivery":True,"budget":"중"},{"name":"치킨 알프레도","cal":720,"emoji":"🍝","food_type":"면","delivery":True,"budget":"중"},{"name":"클램 차우더","cal":380,"emoji":"🍝","food_type":"기타","delivery":False,"budget":"중"}],
+    "중식 메뉴": [{"name":"짜장면","cal":650,"emoji":"🥢","food_type":"면","delivery":True,"budget":"저"},{"name":"짬뽕","cal":700,"emoji":"🥢","food_type":"면","delivery":True,"budget":"저"},{"name":"탕수육","cal":800,"emoji":"🥢","food_type":"고기","delivery":True,"budget":"중"},{"name":"마파두부","cal":400,"emoji":"🥢","food_type":"밥","delivery":True,"budget":"중"},{"name":"딤섬","cal":500,"emoji":"🥢","food_type":"기타","delivery":False,"budget":"중"},{"name":"마라탕","cal":700,"emoji":"🥢","food_type":"기타","delivery":True,"budget":"중"},{"name":"마라샹궈","cal":800,"emoji":"🥢","food_type":"기타","delivery":True,"budget":"중"},{"name":"훠궈","cal":750,"emoji":"🥢","food_type":"기타","delivery":False,"budget":"고"},{"name":"꿔바로우","cal":820,"emoji":"🥢","food_type":"고기","delivery":True,"budget":"중"},{"name":"양꼬치","cal":600,"emoji":"🥢","food_type":"고기","delivery":False,"budget":"중"},{"name":"깐풍기","cal":780,"emoji":"🥢","food_type":"고기","delivery":True,"budget":"중"},{"name":"유린기","cal":700,"emoji":"🥢","food_type":"고기","delivery":True,"budget":"중"},{"name":"동파육","cal":850,"emoji":"🥢","food_type":"고기","delivery":False,"budget":"고"}],
+    "안주 메뉴": [{"name":"치킨","cal":850,"emoji":"🍻","food_type":"고기","delivery":True,"budget":"중"},{"name":"족발","cal":750,"emoji":"🍻","food_type":"고기","delivery":True,"budget":"중"},{"name":"마른안주 세트","cal":300,"emoji":"🍻","food_type":"기타","delivery":True,"budget":"저"},{"name":"두부김치","cal":350,"emoji":"🍻","food_type":"기타","delivery":False,"budget":"저"},{"name":"골뱅이소면","cal":450,"emoji":"🍻","food_type":"면","delivery":False,"budget":"저"},{"name":"감자전","cal":380,"emoji":"🍻","food_type":"기타","delivery":False,"budget":"저"},{"name":"해물파전","cal":480,"emoji":"🍻","food_type":"기타","delivery":False,"budget":"저"},{"name":"닭발","cal":420,"emoji":"🍻","food_type":"고기","delivery":True,"budget":"저"},{"name":"삼겹살","cal":700,"emoji":"🍻","food_type":"고기","delivery":False,"budget":"중"},{"name":"소시지 야채볶음","cal":500,"emoji":"🍻","food_type":"고기","delivery":False,"budget":"저"},{"name":"계란말이","cal":280,"emoji":"🍻","food_type":"기타","delivery":False,"budget":"저"},{"name":"오돌뼈","cal":460,"emoji":"🍻","food_type":"고기","delivery":False,"budget":"저"},{"name":"곱창볶음","cal":650,"emoji":"🍻","food_type":"고기","delivery":True,"budget":"중"},{"name":"라볶이","cal":550,"emoji":"🍻","food_type":"기타","delivery":True,"budget":"저"}],
+    "혼자 먹는 메뉴": [{"name":"편의점 도시락","cal":550,"emoji":"🎧","food_type":"밥","delivery":False,"budget":"저"},{"name":"라면","cal":500,"emoji":"🎧","food_type":"면","delivery":False,"budget":"저"},{"name":"김밥 한 줄","cal":400,"emoji":"🎧","food_type":"기타","delivery":True,"budget":"저"},{"name":"우동","cal":450,"emoji":"🎧","food_type":"면","delivery":True,"budget":"저"},{"name":"덮밥","cal":600,"emoji":"🎧","food_type":"밥","delivery":True,"budget":"저"},{"name":"국밥","cal":550,"emoji":"🎧","food_type":"밥","delivery":False,"budget":"저"},{"name":"냉면","cal":500,"emoji":"🎧","food_type":"면","delivery":True,"budget":"중"},{"name":"돈까스 정식","cal":700,"emoji":"🎧","food_type":"고기","delivery":True,"budget":"저"},{"name":"1인 샤브샤브","cal":480,"emoji":"🎧","food_type":"기타","delivery":False,"budget":"중"},{"name":"제육 덮밥","cal":620,"emoji":"🎧","food_type":"밥","delivery":True,"budget":"저"},{"name":"삼각김밥 세트","cal":420,"emoji":"🎧","food_type":"기타","delivery":False,"budget":"저"},{"name":"소고기 국밥","cal":580,"emoji":"🎧","food_type":"밥","delivery":False,"budget":"저"},{"name":"짬뽕 1인분","cal":680,"emoji":"🎧","food_type":"면","delivery":True,"budget":"저"},{"name":"혼밥 정식","cal":650,"emoji":"🎧","food_type":"밥","delivery":True,"budget":"저"}],
 }
-
-# 하드코딩된 데이터는 삭제하고 위에서 정의한 CATEGORIES를 이용해 빈 딕셔너리 생성
-MENU_DATA = {cat: [] for cat in CATEGORIES}
+CATEGORIES = list(MENU_DATA.keys())
 
 # ── CSV 메뉴 데이터 불러오기 (data/Detailed_Menu_Data.csv) ────────────────
 @st.cache_data
@@ -89,6 +79,7 @@ def load_csv_data():
 
 csv_df = load_csv_data()
 
+# 🔥 추가된 CSV 이모지 매칭 로직 적용
 if csv_df is not None:
     for _, row in csv_df.iterrows():
         # CSV 파일에서 가져올 3가지 데이터 매칭
@@ -101,22 +92,13 @@ if csv_df is not None:
             menu_cal = 0
             
         if cat in MENU_DATA and menu_name.strip():
-            
-            # 메뉴 이름에 포함된 단어를 찾아 맞춤 이모지 자동 적용
-            matched_emoji = None
-            for keyword, emoji in MENU_EMOJI_MAP.items():
-                if keyword in menu_name:
-                    matched_emoji = emoji
-                    break
-            
-            # 매칭되는 단어가 없으면 해당 카테고리의 기본 이모지로 대체
-            if not matched_emoji:
-                matched_emoji = CATEGORY_EMOJI.get(cat, "🍽️")
+            # 해당 카테고리의 대표 이모지를 가져옵니다. (없으면 🍽️)
+            cat_emoji = CATEGORY_EMOJI.get(cat, "🍽️")
             
             MENU_DATA[cat].append({
                 "name": menu_name.strip(),
                 "cal": menu_cal,
-                "emoji": matched_emoji,  
+                "emoji": cat_emoji,      # 빈칸 대신 카테고리 이모지를 적용
                 "food_type": "기타",     
                 "delivery": True if cat == "배달 메뉴" else False, 
                 "budget": "중"           
@@ -452,21 +434,16 @@ st.markdown('<div class="title-pill-wrap"><div class="title-pill"> 오늘의 추
 
 # ── 오늘의 운세 배너 ─────────────────────────────────────────
 fortune_msg, fortune_tip = get_fortune()
-# 만약 메뉴가 비어있지 않다면 운세용 랜덤 메뉴를 고름
 all_menus_flat = [m for cat in MENU_DATA.values() for m in cat]
-fortune_food_html = ""
-if all_menus_flat:
-    random.seed(date.today().isoformat() + "food")
-    fortune_food = random.choice(all_menus_flat)
-    random.seed()
-    fortune_food_html = f"오늘의 추천: <b>{fortune_food['emoji']} {fortune_food['name']}</b>"
-
+random.seed(date.today().isoformat() + "food")
+fortune_food = random.choice(all_menus_flat)
+random.seed()
 st.markdown(f"""<div class="fortune-card">
     <div style="font-size:1.5rem;font-weight:900;margin-bottom:.4rem"> 오늘의 운세</div>
     <div style="font-size:1.1rem;font-weight:700;margin-bottom:.3rem">{fortune_msg}</div>
     <div style="font-size:.9rem;opacity:.9;margin-bottom:.8rem">{fortune_tip}</div>
     <div style="background:rgba(255,255,255,.25);border-radius:12px;padding:.5rem 1.5rem;display:inline-block;">
-         {fortune_food_html}
+         오늘의 추천: <b>{fortune_food['emoji']} {fortune_food['name']}</b>
     </div>
 </div>""", unsafe_allow_html=True)
 
