@@ -42,7 +42,10 @@ CATEGORY_EMOJI = {
     "안주 메뉴":"🍻","혼자 먹는 메뉴":"🎧",
 }
 
-# 🔥 각 음식별 맞춤 이모지 사전 (여기에 없는 키워드를 추가하셔도 좋습니다!)
+# 🔥 에러 해결 부분: CATEGORY_EMOJI에서 카테고리 목록을 먼저 만듭니다.
+CATEGORIES = list(CATEGORY_EMOJI.keys())
+
+# 각 음식별 맞춤 이모지 사전
 MENU_EMOJI_MAP = {
     "삼겹살": "🥓", "치킨": "🍗", "피자": "🍕", "파스타": "🍝", "스테이크": "🥩",
     "초밥": "🍣", "스시": "🍣", "된장찌개": "🍲", "갈비탕": "🍲", "불고기": "🥩", 
@@ -65,7 +68,7 @@ MENU_EMOJI_MAP = {
     "빵": "🍞", "디저트": "🍨", "아이스크림": "🍦", "회": "🐟", "냉면": "🍜"
 }
 
-# 하드코딩된 데이터는 삭제하고 초기화만 해둡니다.
+# 하드코딩된 데이터는 삭제하고 위에서 정의한 CATEGORIES를 이용해 빈 딕셔너리 생성
 MENU_DATA = {cat: [] for cat in CATEGORIES}
 
 # ── CSV 메뉴 데이터 불러오기 (data/Detailed_Menu_Data.csv) ────────────────
@@ -99,12 +102,12 @@ if csv_df is not None:
             
         if cat in MENU_DATA and menu_name.strip():
             
-            # 🔥 메뉴 이름에 포함된 단어를 찾아 맞춤 이모지 자동 적용
+            # 메뉴 이름에 포함된 단어를 찾아 맞춤 이모지 자동 적용
             matched_emoji = None
             for keyword, emoji in MENU_EMOJI_MAP.items():
                 if keyword in menu_name:
                     matched_emoji = emoji
-                    break # 키워드를 찾으면 탐색 종료
+                    break
             
             # 매칭되는 단어가 없으면 해당 카테고리의 기본 이모지로 대체
             if not matched_emoji:
@@ -113,7 +116,7 @@ if csv_df is not None:
             MENU_DATA[cat].append({
                 "name": menu_name.strip(),
                 "cal": menu_cal,
-                "emoji": matched_emoji,  # 🔥 자동으로 찾은 이모지 등록
+                "emoji": matched_emoji,  
                 "food_type": "기타",     
                 "delivery": True if cat == "배달 메뉴" else False, 
                 "budget": "중"           
