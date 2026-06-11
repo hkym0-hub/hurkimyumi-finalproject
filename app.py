@@ -1026,7 +1026,7 @@ if(IS_SPINNING){{let frame=0;const totalFrames=25;function step(){{if(frame<tota
             for col, card in zip(ocols, others):
                 with col:
                     st.markdown(f"""<div class="menu-card" style="opacity:.7">
-                        <div style="font-size:2rem">{card['emoji']}</div><div class="menu-card-title" style="color:#555">{card['name']}</div>
+                        <div style="font-size:2rem">{card['emoji']}</div><div class="menu-card-title">{card['name']}</div>
                         <div class="menu-card-cal">🔥 {card['cal']} kcal</div></div>""", unsafe_allow_html=True)
             if st.button("🔄 다시 뽑기", use_container_width=True, type="secondary"):
                 st.session_state.tarot_cards = random.sample(menus, min(3, len(menus)))
@@ -1037,8 +1037,9 @@ if(IS_SPINNING){{let frame=0;const totalFrames=25;function step(){{if(frame<tota
         st.markdown("### 🧠 스마트 추천")
         recent_names = {h["menu"] for h in st.session_state.history[:10]}
         fresh = [m for m in menus if m["name"] not in recent_names] or menus
-        st.markdown(f"""<div style="background:#f0f8ff;border-radius:12px;padding:1rem;margin-bottom:1rem;border-left:4px solid #4facfe;">
-            <p style="margin:0;color:#333;font-size:.9rem">💡 최근 이력 <b>{len(recent_names)}</b>개 분석 완료 · <b>{len(fresh)}</b>개 새 메뉴 중 추천</p></div>""", unsafe_allow_html=True)
+        
+        st.markdown(f"""<div class="smart-notice">
+            <p style="margin:0;font-size:.9rem">💡 최근 이력 <b>{len(recent_names)}</b>개 분석 완료 · <b>{len(fresh)}</b>개 새 메뉴 중 추천</p></div>""", unsafe_allow_html=True)
         if st.button("🧠 스마트 추천 받기", type="primary", use_container_width=True):
             st.session_state._random_result = random.choice(fresh)
             st.rerun()
@@ -1269,6 +1270,7 @@ with tab_analysis:
                 y=alt.Y('횟수', axis=alt.Axis(labelColor=chart_text_color, title=None, tickMinStep=1, labelFontSize=12)),
                 tooltip=['종류', '횟수']
             ).properties(height=250).configure(background='transparent').configure_view(strokeOpacity=0)
+            
             st.altair_chart(type_chart, use_container_width=True)
             
         with ch_col2:
@@ -1281,6 +1283,7 @@ with tab_analysis:
                 y=alt.Y('횟수', axis=alt.Axis(labelColor=chart_text_color, title=None, tickMinStep=1, labelFontSize=12)),
                 tooltip=['카테고리', '횟수']
             ).properties(height=250).configure(background='transparent').configure_view(strokeOpacity=0)
+            
             st.altair_chart(cat_chart, use_container_width=True)
 
         st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
