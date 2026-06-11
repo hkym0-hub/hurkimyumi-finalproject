@@ -71,49 +71,47 @@ FORTUNES = [
     ("누군가와 함께하고 싶은 날 🤝", "여럿이 나눠 먹기 좋은 메뉴로!"),
 ]
 
-# ── 엑셀 및 CSV 파일 연동 (상세 메뉴 자동 확장) ────────────────────
-@st.cache_data(show_spinner=False)
-def load_calories_from_excel():
-    excel_file = "Menu_Calories_Data.xlsx"
-    cal_dict = {}
-    if os.path.exists(excel_file):
-        try:
-            df_excel = pd.read_excel(excel_file, engine="openpyxl")
-            if '메뉴명' in df_excel.columns and '칼로리(kcal)' in df_excel.columns:
-                for _, row in df_excel.iterrows():
-                    cal_dict[str(row['메뉴명']).strip()] = int(row['칼로리(kcal)'])
-        except Exception:
-            pass
-    return cal_dict
-
+# ── CSV 파일 연동 (원본 칼로리 덮어쓰기 및 상세 메뉴 자동 확장) ────────────────────
 @st.cache_data(show_spinner=False)
 def load_detailed_menus_from_csv():
     csv_file = "Detailed_Menu_Data.csv"
     detailed_menus = []
     if os.path.exists(csv_file):
         try:
-            df = pd.read_csv(csv_file, encoding="utf-8-sig")
-            if '메뉴명' in df.columns and '칼로리(kcal)' in df.columns:
+            # 파일 상단 2줄이 메타데이터이므로 header=2 옵션 사용
+            df = pd.read_csv(csv_file, header=2, encoding="utf-8-sig")
+            
+            # 컬럼명이 일치하는지 확인
+            if '메뉴명' in df.columns and '칼로리 (kcal)' in df.columns:
                 for _, row in df.iterrows():
-                    detailed_menus.append({
-                        "name": str(row['메뉴명']).strip(),
-                        "cal": int(row['칼로리(kcal)']) if pd.notna(row['칼로리(kcal)']) else 0
-                    })
+                    cal_val = row['칼로리 (kcal)']
+                    if pd.notna(cal_val):
+                        # 1,500 과 같이 콤마가 포함된 문자열 처리
+                        if isinstance(cal_val, str):
+                            cal_val = cal_val.replace(',', '').strip()
+                            
+                        detailed_menus.append({
+                            "name": str(row['메뉴명']).strip(),
+                            "cal": int(cal_val)
+                        })
         except Exception:
             pass
     return detailed_menus
 
-# 1. 원본 메뉴 칼로리 덮어쓰기
-excel_data = load_calories_from_excel()
-if excel_data:
+
+detailed_data = load_detailed_menus_from_csv()
+
+if detailed_data:
+    # 빠른 덮어쓰기를 위한 딕셔너리 매핑 생성
+    cal_dict = {item['name']: item['cal'] for item in detailed_data}
+
+    # 1. 원본 메뉴 칼로리 덮어쓰기
     for category, item_list in MENU_DATA.items():
         for item in item_list:
-            if item['name'] in excel_data:
-                item['cal'] = excel_data[item['name']]
+            if item['name'] in cal_dict:
+                item['cal'] = cal_dict[item['name']]
 
-# 2. 구체적인 파생 메뉴(참치김밥 등)를 기존 메뉴(김밥)의 속성을 상속받아 카테고리에 동적 추가
-detailed_data = load_detailed_menus_from_csv()
-if detailed_data:
+    # 2. 구체적인 파생 메뉴(참치김밥 등)를 기존 메뉴(김밥)의 속성을 상속받아 카테고리에 동적 추가
     for category, item_list in MENU_DATA.items():
         generic_items = list(item_list) 
         existing_names = {item['name'] for item in generic_items}
