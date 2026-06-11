@@ -79,29 +79,62 @@ def load_csv_data():
 
 csv_df = load_csv_data()
 
-# 🔥 추가된 CSV 이모지 매칭 로직 적용
+# CSV 카테고리 키워드 → 앱 카테고리 매핑
+KEYWORD_TO_CAT = {
+    "저녁": "저녁 메뉴",
+    "배달": "배달 메뉴",
+    "데이트": "데이트 메뉴",
+    "다이어트": "다이어트 메뉴",
+    "가성비": "가성비 메뉴",
+    "캠핑": "캠핑 메뉴",
+    "매운": "매운 메뉴",
+    "파티": "파티 메뉴",
+    "한식": "한식 메뉴",
+    "일식": "일식 메뉴",
+    "양식": "양식 메뉴",
+    "중식": "중식 메뉴",
+    "안주": "안주 메뉴",
+    "혼식": "혼자 먹는 메뉴",
+}
+
 if csv_df is not None:
+    # 칼로리 컬럼명 자동 감지 (공백 포함 가능)
+    cal_col = next((c for c in csv_df.columns if "칼로리" in c), None)
+
     for _, row in csv_df.iterrows():
-        # CSV 파일에서 가져올 3가지 데이터 매칭
-        cat = str(row.get("카테고리", ""))
-        menu_name = str(row.get("메뉴명", ""))
-        
+        raw_cat = str(row.get("카테고리", ""))
+        menu_name = str(row.get("메뉴명", "")).strip()
+
         try:
-            menu_cal = int(row.get("칼로리", 0))
+            cal_val = str(row.get(cal_col, "0")).replace(",", "")
+            menu_cal = int(float(cal_val))
         except (ValueError, TypeError):
             menu_cal = 0
-            
-        if cat in MENU_DATA and menu_name.strip():
-            # 해당 카테고리의 대표 이모지를 가져옵니다. (없으면 🍽️)
-            cat_emoji = CATEGORY_EMOJI.get(cat, "🍽️")
-            
-            MENU_DATA[cat].append({
-                "name": menu_name.strip(),
+
+        if not menu_name or menu_name == "nan":
+            continue
+
+        # 쉼표로 분리된 복수 카테고리 처리
+        keywords = [k.strip() for k in raw_cat.split(",")]
+
+        for kw in keywords:
+            target_cat = KEYWORD_TO_CAT.get(kw)
+            if not target_cat:
+                continue
+
+            # 이미 같은 이름 있으면 스킵 (중복 방지)
+            existing_names = {m["name"] for m in MENU_DATA[target_cat]}
+            if menu_name in existing_names:
+                continue
+
+            cat_emoji = CATEGORY_EMOJI.get(target_cat, "🍽️")
+            MENU_DATA[target_cat].append({
+                "name": menu_name,
                 "cal": menu_cal,
-                "emoji": cat_emoji,      # 빈칸 대신 카테고리 이모지를 적용
-                "food_type": "기타",     
-                "delivery": True if cat == "배달 메뉴" else False, 
-                "budget": "중"           
+                "emoji": cat_emoji,
+                "food_type": "기타",
+                "delivery": target_cat == "배달 메뉴",
+                "budget": "중",
             })
 
 FORTUNES = [
