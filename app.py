@@ -71,14 +71,13 @@ FORTUNES = [
     ("누군가와 함께하고 싶은 날 🤝", "여럿이 나눠 먹기 좋은 메뉴로!"),
 ]
 
-# ── 엑셀(XLSX) 파일 연동 및 칼로리 매핑 함수 ────────────────────
+# ── 엑셀(XLSX) 파일 연동 및 상세 메뉴 자동 확장 ────────────────────
 @st.cache_data(show_spinner=False)
 def load_calories_from_excel():
     excel_file = "Menu_Calories_Data.xlsx"
     cal_dict = {}
     if os.path.exists(excel_file):
         try:
-            # openpyxl 엔진을 사용하여 파일 로드
             df_excel = pd.read_excel(excel_file, engine="openpyxl")
             if '메뉴명' in df_excel.columns and '칼로리(kcal)' in df_excel.columns:
                 for _, row in df_excel.iterrows():
@@ -87,13 +86,53 @@ def load_calories_from_excel():
             pass
     return cal_dict
 
-# 앱 구동 시 엑셀 데이터를 가져와 기본 MENU_DATA 업데이트
+@st.cache_data(show_spinner=False)
+def load_detailed_menus_from_excel():
+    excel_file = "Detailed_Menu_Data.xlsx"
+    detailed_menus = []
+    if os.path.exists(excel_file):
+        try:
+            df = pd.read_excel(excel_file, engine="openpyxl")
+            for _, row in df.iterrows():
+                detailed_menus.append({
+                    "name": str(row['메뉴명']).strip(),
+                    "cal": int(row['칼로리(kcal)']) if pd.notna(row['칼로리(kcal)']) else 0
+                })
+        except Exception:
+            pass
+    return detailed_menus
+
+# 1. 원본 메뉴 칼로리 덮어쓰기
 excel_data = load_calories_from_excel()
 if excel_data:
     for category, item_list in MENU_DATA.items():
         for item in item_list:
             if item['name'] in excel_data:
                 item['cal'] = excel_data[item['name']]
+
+# 2. 구체적인 파생 메뉴(참치김밥 등)를 기존 메뉴(김밥)의 속성을 상속받아 카테고리에 동적 추가
+detailed_data = load_detailed_menus_from_excel()
+if detailed_data:
+    for category, item_list in MENU_DATA.items():
+        generic_items = list(item_list) 
+        existing_names = {item['name'] for item in generic_items}
+        
+        for detailed in detailed_data:
+            for gen_item in generic_items:
+                gen_name = gen_item['name']
+                
+                # 상세 메뉴명(참치김밥) 안에 원본 메뉴명(김밥)이 포함되어 있다면 확장 메뉴로 등록
+                if gen_name in detailed['name'] and detailed['name'] not in existing_names:
+                    new_item = {
+                        "name": detailed['name'],
+                        "cal": detailed['cal'],
+                        "emoji": gen_item.get('emoji', '🍽️'),
+                        "food_type": gen_item.get('food_type', '기타'),
+                        "delivery": gen_item.get('delivery', False),
+                        "budget": gen_item.get('budget', '중')
+                    }
+                    MENU_DATA[category].append(new_item)
+                    existing_names.add(detailed['name'])
 
 # ── 세션 초기화 ───────────────────────────────────────────────
 def init():
@@ -449,7 +488,7 @@ if len(menus) < 2:
 elif method is None:
     METHODS = [
         ("random",   "랜덤",      "버튼 한 번에 즉시 추천",         "🎲"),
-        ("roulette", "룰렛",      "회전하는 룰렛 바퀴",              "🎡"),
+        ("roulette", "룰렛",      "회전하는 룰렛 바퀴",             "🎡"),
         ("scratch",  "스크래치",  "마우스로 직접 긁어서 확인",       "🎁"),
         ("worldcup", "월드컵",    "1:1 대결로 최후의 1개",          "🏆"),
         ("dice",     "주사위",    "주사위 굴려서 결정",              "🎲"),
