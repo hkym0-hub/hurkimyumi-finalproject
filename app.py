@@ -71,53 +71,29 @@ FORTUNES = [
     ("누군가와 함께하고 싶은 날 🤝", "여럿이 나눠 먹기 좋은 메뉴로!"),
 ]
 
-# ── CSV 기반 칼로리 자동 업데이트 함수 (음료 제외, 성능 최적화) ──
+# ── 엑셀(XLSX) 파일 연동 및 칼로리 매핑 함수 ────────────────────
 @st.cache_data(show_spinner=False)
-def load_calorie_db():
-    file_name = "20251229_음식DB 19495건.xlsx - 20251229_음식DB_19,495건.csv"
-    cal_mapping = {}
-    if not os.path.exists(file_name):
-        return cal_mapping
-    try:
+def load_calories_from_excel():
+    excel_file = "Menu_Calories_Data.xlsx"
+    cal_dict = {}
+    if os.path.exists(excel_file):
         try:
-            df = pd.read_csv(file_name, encoding="utf-8", low_memory=False)
+            # openpyxl 엔진을 사용하여 파일 로드
+            df_excel = pd.read_excel(excel_file, engine="openpyxl")
+            if '메뉴명' in df_excel.columns and '칼로리(kcal)' in df_excel.columns:
+                for _, row in df_excel.iterrows():
+                    cal_dict[str(row['메뉴명']).strip()] = int(row['칼로리(kcal)'])
         except Exception:
-            df = pd.read_csv(file_name, encoding="cp949", low_memory=False)
-            
-        # 1. 음료 및 차류 카테고리 철저히 제외
-        if '식품대분류명' in df.columns:
-            df = df[~df['식품대분류명'].str.contains("음료|차류", na=False)]
-            
-        if '에너지(kcal)' in df.columns and '식품중량' in df.columns:
-            # 2. 1회 제공량(식품중량)을 파싱하여 실제 총 칼로리 계산
-            df['weight_num'] = df['식품중량'].astype(str).str.extract(r'(\d+\.?\d*)')[0].astype(float)
-            df['weight_num'] = df['weight_num'].fillna(100.0)
-            df['total_cal'] = df['에너지(kcal)'] * (df['weight_num'] / 100.0)
-            
-            # 3. MENU_DATA에 있는 고유 음식명 추출하여 매핑 진행
-            unique_menus = set(item['name'] for cat in MENU_DATA.values() for item in cat)
-            for name in unique_menus:
-                # 대표식품명 완전 일치 탐색
-                exact = df[df['대표식품명'] == name] if '대표식품명' in df.columns else pd.DataFrame()
-                if not exact.empty:
-                    cal_mapping[name] = int(exact['total_cal'].mean())
-                else:
-                    # 식품명 부분 일치 탐색 (예: "국밥" -> "순대국밥", "돼지머리국밥" 평균)
-                    partial = df[df['식품명'].str.contains(name, na=False)]
-                    if not partial.empty:
-                        cal_mapping[name] = int(partial['total_cal'].mean())
-    except Exception:
-        pass
-    
-    return cal_mapping
+            pass
+    return cal_dict
 
-# 동적 칼로리 매핑 적용
-csv_cal_mapping = load_calorie_db()
-if csv_cal_mapping:
-    for cat, items in MENU_DATA.items():
-        for item in items:
-            if item['name'] in csv_cal_mapping:
-                item['cal'] = csv_cal_mapping[item['name']]
+# 앱 구동 시 엑셀 데이터를 가져와 기본 MENU_DATA 업데이트
+excel_data = load_calories_from_excel()
+if excel_data:
+    for category, item_list in MENU_DATA.items():
+        for item in item_list:
+            if item['name'] in excel_data:
+                item['cal'] = excel_data[item['name']]
 
 # ── 세션 초기화 ───────────────────────────────────────────────
 def init():
@@ -134,7 +110,7 @@ def init():
         "today_log": saved_data.get("today_log", []),
         "fortune_today": None, "fortune_date": None,
         "tarot_cards": None, "tarot_chosen": None,
-        "filter_cal_min": 0, "filter_cal_max": 3000,
+        "filter_cal_min": 0, "filter_cal_max": 1200,
         "filter_food_type": "전체", "filter_budget": "전체",
         "roulette_done": False, "roulette_winner": None,
         "roulette_winner_idx": 0,
@@ -270,7 +246,6 @@ else:
 
 # ── 사이드바 ─────────────────────────────────────────────────
 with st.sidebar:
-    # 로고
     st.markdown("""
     <div class="sidebar-logo">
         <div style="font-size:2.2rem">🍽️</div>
@@ -279,7 +254,6 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    # 다크모드 토글
     st.markdown('<div class="sidebar-section-label">테마</div>', unsafe_allow_html=True)
     theme_slider = st.select_slider(
         "테마",
@@ -293,7 +267,6 @@ with st.sidebar:
         save_data()
         st.rerun()
 
-    # 카테고리 목록
     st.markdown('<div class="sidebar-section-label">음식 카테고리</div>', unsafe_allow_html=True)
 
     for cat in CATEGORIES:
@@ -308,7 +281,6 @@ with st.sidebar:
             type=btn_style
         ):
             st.session_state.active_cat = cat
-            # reset method state
             st.session_state.active_method = None
             st.session_state.tournament_state = None
             st.session_state.scratch_revealed = False
@@ -324,7 +296,6 @@ with st.sidebar:
             st.session_state.dice_winner = None
             st.rerun()
 
-    # 하단 요약 정보
     st.markdown("---")
     today = date.today().isoformat()
     today_entries = [e for e in st.session_state.today_log if e["date"] == today]
@@ -440,7 +411,7 @@ st.markdown(f"""<div class="fortune-card">
 with st.expander("🔍 조건 필터", expanded=False):
     fc1, fc2, fc3 = st.columns(3)
     with fc1:
-        cal_range = st.slider("🔥 칼로리 범위 (kcal)", 0, 3000,
+        cal_range = st.slider("🔥 칼로리 범위 (kcal)", 0, 1200,
                               (st.session_state.filter_cal_min, st.session_state.filter_cal_max), 50)
         st.session_state.filter_cal_min, st.session_state.filter_cal_max = cal_range
     with fc2:
@@ -457,7 +428,7 @@ with st.expander("🔍 조건 필터", expanded=False):
     if filtered_count < total_count:
         st.info(f"필터 적용 중: {total_count}개 → **{filtered_count}개** 메뉴 (필터 결과가 0개면 전체 표시)")
     if st.button("🔄 필터 초기화"):
-        st.session_state.filter_cal_min = 0; st.session_state.filter_cal_max = 3000
+        st.session_state.filter_cal_min = 0; st.session_state.filter_cal_max = 1200
         st.session_state.filter_food_type = "전체"
         st.session_state.filter_budget = "전체"; st.rerun()
 
