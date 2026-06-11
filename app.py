@@ -746,9 +746,54 @@ if(IS_SPINNING){{let frame=0;const totalFrames=25;function step(){{if(frame<tota
 
 # ── 하단 탭 ──────────────────────────────────────────────────
 st.markdown("<hr style='border:none;border-top:2px solid #ddd;margin:1.5rem 0 1rem'>", unsafe_allow_html=True)
-tab_hist, tab_tracker, tab_rank, tab_analysis, tab_feed, tab_mgmt = st.tabs([
-    "📋 추천 이력", "🔥 칼로리 트래커", "🏅 메뉴 랭킹", "📊 식습관 분석", "💡 추천 피드", "🔧 메뉴 관리"
+
+# ▼▼▼ 변경: 추천 피드를 첫 번째 탭으로 이동 ▼▼▼
+tab_feed, tab_hist, tab_tracker, tab_rank, tab_analysis, tab_mgmt = st.tabs([
+    "💡 추천 피드", "📋 추천 이력", "🔥 칼로리 트래커", "🏅 메뉴 랭킹", "📊 식습관 분석", "🔧 메뉴 관리"
 ])
+
+with tab_feed:
+    st.markdown("### 💡 추천 피드")
+    if st.session_state.history:
+        latest = st.session_state.history[0]
+        share_text = f"오늘의 추천 메뉴는 [{latest['emoji']} {latest['menu']}]🔥\n(칼로리: {latest['cal']}kcal)\n우리 이거 먹으러 갈래? 😋"
+        with st.expander("💬 카카오톡/문자로 방금 고른 메뉴 공유하기", expanded=True):
+            st.markdown("아래 텍스트 우측 상단의 **복사 아이콘**을 클릭해 친구에게 바로 공유해보세요!")
+            st.code(share_text, language="markdown")
+    st.markdown("**🔄 최근 채택한 메뉴 다시 먹기**")
+    if st.session_state.history:
+        recent = st.session_state.history[:5]
+        rcols = st.columns(min(len(recent), 5))
+        for idx, (col, h) in enumerate(zip(rcols, recent)):
+            with col:
+                st.markdown(f"""<div style="background:white;border-radius:12px;padding:.8rem;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+                    <div style="font-size:1.8rem">{h['emoji']}</div><div style="font-size:.85rem;font-weight:700;color:#1a1a2e;margin:.3rem 0">{h['menu']}</div>
+                    <div style="font-size:.75rem;color:#aaa">{h['cal']} kcal</div></div>""", unsafe_allow_html=True)
+                if st.button("다시 먹기", key=f"reorder_{idx}_{h['menu']}_{h['time']}", use_container_width=True):
+                    matched = next((m for cat in MENU_DATA.values() for m in cat if m["name"] == h["menu"]), None)
+                    if matched: add_history(matched, "🔄 재먹기"); st.success(f"{h['menu']} 기록됨!"); st.rerun()
+    else:
+        st.info("채택한 메뉴 이력이 없어요.")
+    st.markdown("---")
+    st.markdown("**🔗 비슷한 메뉴 추천**")
+    if st.session_state.last_result:
+        lr = st.session_state.last_result
+        last_name = lr["menu"]; last_cal = lr["cal"]; last_type = lr.get("food_type", "기타")
+        all_flat = [m for cat in MENU_DATA.values() for m in cat]
+        similar = [m for m in all_flat if m["name"] != last_name and
+                   (m.get("food_type") == last_type or abs(m.get("cal", 0) - last_cal) <= 200)]
+        similar = random.sample(similar, min(4, len(similar)))
+        st.markdown(f"<p style='color:#555;font-size:.9rem'>'{last_name}' 과 비슷한 메뉴들</p>", unsafe_allow_html=True)
+        scols = st.columns(len(similar)) if similar else []
+        for idx, (col, m) in enumerate(zip(scols, similar)):
+            with col:
+                st.markdown(f"""<div style="background:white;border-radius:12px;padding:.8rem;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+                    <div style="font-size:1.8rem">{m['emoji']}</div><div style="font-size:.85rem;font-weight:700;color:#1a1a2e;margin:.3rem 0">{m['name']}</div>
+                    <div style="font-size:.75rem;color:#aaa">{m['cal']} kcal · {m.get('food_type', '')}</div></div>""", unsafe_allow_html=True)
+                if st.button("채택", key=f"sim_{idx}_{m['name']}", use_container_width=True):
+                    add_history(m, "🔗 비슷한 메뉴"); st.success(f"{m['name']} 기록됨!"); st.rerun()
+    else:
+        st.info("먼저 메뉴를 채택하면 비슷한 메뉴를 추천해드려요!")
 
 with tab_hist:
     if st.session_state.history:
@@ -934,49 +979,6 @@ with tab_analysis:
         </div>""", unsafe_allow_html=True)
     else:
         st.info("📊 분석을 위해 메뉴를 3회 이상 채택해보세요!")
-
-with tab_feed:
-    st.markdown("### 💡 추천 피드")
-    if st.session_state.history:
-        latest = st.session_state.history[0]
-        share_text = f"오늘의 추천 메뉴는 [{latest['emoji']} {latest['menu']}]🔥\n(칼로리: {latest['cal']}kcal)\n우리 이거 먹으러 갈래? 😋"
-        with st.expander("💬 카카오톡/문자로 방금 고른 메뉴 공유하기", expanded=True):
-            st.markdown("아래 텍스트 우측 상단의 **복사 아이콘**을 클릭해 친구에게 바로 공유해보세요!")
-            st.code(share_text, language="markdown")
-    st.markdown("**🔄 최근 채택한 메뉴 다시 먹기**")
-    if st.session_state.history:
-        recent = st.session_state.history[:5]
-        rcols = st.columns(min(len(recent), 5))
-        for idx, (col, h) in enumerate(zip(rcols, recent)):
-            with col:
-                st.markdown(f"""<div style="background:white;border-radius:12px;padding:.8rem;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.07);">
-                    <div style="font-size:1.8rem">{h['emoji']}</div><div style="font-size:.85rem;font-weight:700;color:#1a1a2e;margin:.3rem 0">{h['menu']}</div>
-                    <div style="font-size:.75rem;color:#aaa">{h['cal']} kcal</div></div>""", unsafe_allow_html=True)
-                if st.button("다시 먹기", key=f"reorder_{idx}_{h['menu']}_{h['time']}", use_container_width=True):
-                    matched = next((m for cat in MENU_DATA.values() for m in cat if m["name"] == h["menu"]), None)
-                    if matched: add_history(matched, "🔄 재먹기"); st.success(f"{h['menu']} 기록됨!"); st.rerun()
-    else:
-        st.info("채택한 메뉴 이력이 없어요.")
-    st.markdown("---")
-    st.markdown("**🔗 비슷한 메뉴 추천**")
-    if st.session_state.last_result:
-        lr = st.session_state.last_result
-        last_name = lr["menu"]; last_cal = lr["cal"]; last_type = lr.get("food_type", "기타")
-        all_flat = [m for cat in MENU_DATA.values() for m in cat]
-        similar = [m for m in all_flat if m["name"] != last_name and
-                   (m.get("food_type") == last_type or abs(m.get("cal", 0) - last_cal) <= 200)]
-        similar = random.sample(similar, min(4, len(similar)))
-        st.markdown(f"<p style='color:#555;font-size:.9rem'>'{last_name}' 과 비슷한 메뉴들</p>", unsafe_allow_html=True)
-        scols = st.columns(len(similar)) if similar else []
-        for idx, (col, m) in enumerate(zip(scols, similar)):
-            with col:
-                st.markdown(f"""<div style="background:white;border-radius:12px;padding:.8rem;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.07);">
-                    <div style="font-size:1.8rem">{m['emoji']}</div><div style="font-size:.85rem;font-weight:700;color:#1a1a2e;margin:.3rem 0">{m['name']}</div>
-                    <div style="font-size:.75rem;color:#aaa">{m['cal']} kcal · {m.get('food_type', '')}</div></div>""", unsafe_allow_html=True)
-                if st.button("채택", key=f"sim_{idx}_{m['name']}", use_container_width=True):
-                    add_history(m, "🔗 비슷한 메뉴"); st.success(f"{m['name']} 기록됨!"); st.rerun()
-    else:
-        st.info("먼저 메뉴를 채택하면 비슷한 메뉴를 추천해드려요!")
 
 with tab_mgmt:
     col_add, col_excl = st.columns(2)
