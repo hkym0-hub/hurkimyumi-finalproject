@@ -881,7 +881,7 @@ if(IS_DONE){{if(!sessionStorage.getItem('spin_done_'+TARGET_IDX)){{const targetA
                     st.rerun()
 
     elif method == "scratch":
-        st.markdown("### 🎁 스크래치 복권")
+        st.markdown("### 🎁 스크래 복권")
         if not st.session_state.scratch_menu:
             st.session_state.scratch_menu = random.choice(menus)
         menu = st.session_state.scratch_menu
@@ -1255,12 +1255,13 @@ with tab_analysis:
             type_cnt = Counter(h.get("food_type", "기타") for h in hist)
             df_type = pd.DataFrame([{"종류": k, "횟수": v} for k, v in type_cnt.items()])
             
-            # 여기서 labelAngle=0 설정 (글자 똑바로 표시)
+            # 투명한 배경을 적용하여 다크모드/라이트모드 상관없이 앱 배경색에 스며들게 함
             type_chart = alt.Chart(df_type).mark_bar(color="#43e97b", cornerRadiusTopLeft=6, cornerRadiusTopRight=6).encode(
                 x=alt.X('종류', sort='-y', axis=alt.Axis(labelAngle=0, labelColor=chart_text_color, title=None, labelFontSize=13)),
                 y=alt.Y('횟수', axis=alt.Axis(labelColor=chart_text_color, title=None, tickMinStep=1, labelFontSize=12)),
                 tooltip=['종류', '횟수']
-            ).properties(height=250)
+            ).properties(height=250).configure(background='transparent').configure_view(strokeOpacity=0)
+            
             st.altair_chart(type_chart, use_container_width=True)
             
         with ch_col2:
@@ -1273,11 +1274,12 @@ with tab_analysis:
                 x=alt.X('카테고리', sort='-y', axis=alt.Axis(labelAngle=0, labelColor=chart_text_color, title=None, labelFontSize=13, labelLimit=200)),
                 y=alt.Y('횟수', axis=alt.Axis(labelColor=chart_text_color, title=None, tickMinStep=1, labelFontSize=12)),
                 tooltip=['카테고리', '횟수']
-            ).properties(height=250)
+            ).properties(height=250).configure(background='transparent').configure_view(strokeOpacity=0)
+            
             st.altair_chart(cat_chart, use_container_width=True)
 
         st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
-        st.markdown(f"#### 📈 최근 칼로 추이 (평균: {avg_cal} kcal)")
+        st.markdown(f"#### 📈 최근 칼로리 추이 (평균: {avg_cal} kcal)")
         recent10 = list(reversed(hist[:10]))
         df_trend = pd.DataFrame([{"메뉴": f"{h['emoji']} {h['menu']}", "칼로리": h['cal']} for h in recent10])
         
@@ -1288,7 +1290,9 @@ with tab_analysis:
             tooltip=['메뉴', '칼로리']
         ).properties(height=300)
         rule = alt.Chart(pd.DataFrame({'평균': [avg_cal]})).mark_rule(color="#667eea", strokeDash=[5, 5]).encode(y='평균')
-        st.altair_chart(trend_chart + rule, use_container_width=True)
+        
+        final_trend_chart = (trend_chart + rule).configure(background='transparent').configure_view(strokeOpacity=0)
+        st.altair_chart(final_trend_chart, use_container_width=True)
     else:
         st.info("📊 식습관 분석을 보려면 추천 메뉴를 3회 이상 채택해주세요!")
 
