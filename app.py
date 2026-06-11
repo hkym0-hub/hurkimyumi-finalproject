@@ -15,26 +15,42 @@ st.set_page_config(page_title="오늘의 추천 메뉴", page_icon="🍽️", la
 # ── 데이터 영구 저장 함수 ──────────────────────────────────────────
 DATA_FILE = "my_food_data.json"
 
-def load_data():
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {}
+def load_menu_csv():
+    csv_path = os.path.join("data", "Detailed_Menu_Data.csv")
 
-def save_data():
-    data = {
-        "history": st.session_state.history,
-        "custom_menus": st.session_state.custom_menus,
-        "excluded": list(st.session_state.excluded),
-        "today_log": st.session_state.today_log,
-        "dark_mode": st.session_state.dark_mode
-    }
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    if not os.path.exists(csv_path):
+        st.error(f"CSV 파일을 찾을 수 없습니다: {csv_path}")
+        return
 
+    try:
+        df = pd.read_csv(csv_path)
+
+        for _, row in df.iterrows():
+
+            categories = str(row["카테고리"]).split(",")
+
+            menu = {
+                "name": str(row["메뉴명"]).strip(),
+                "cal": int(str(row["칼로리 (kcal)"]).replace(",", "")),
+                "emoji": "🍽️",
+                "food_type": "기타",
+                "delivery": False,
+                "budget": "중"
+            }
+
+            for cat in categories:
+
+                cat = cat.strip()
+
+                cat_name = f"{cat} 메뉴"
+
+                if cat_name not in MENU_DATA:
+                    MENU_DATA[cat_name] = []
+
+                MENU_DATA[cat_name].append(menu.copy())
+
+    except Exception as e:
+        st.error(f"CSV 로드 오류: {e}")
 # ── 데이터 ────────────────────────────────────────────────────
 CATEGORY_EMOJI = {
     "저녁 메뉴":"🌙","배달 메뉴":"🛵","데이트 메뉴":"💑","다이어트 메뉴":"🥗",
