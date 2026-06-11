@@ -8,6 +8,9 @@ from collections import Counter, defaultdict
 import json
 import pandas as pd
 import altair as alt
+import pandas as pd
+
+df = pd.read_csv("data/Detailed_Menu_Data.csv")
 
 st.set_page_config(page_title="오늘의 추천 메뉴", page_icon="🍽️", layout="wide", initial_sidebar_state="expanded")
 
