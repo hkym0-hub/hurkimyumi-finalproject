@@ -19,8 +19,8 @@ def load_data():
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
-            except Exception:
-                pass
+        except Exception:
+            pass
     return {}
 
 def save_data():
@@ -70,34 +70,35 @@ def load_csv_data():
             df = pd.read_csv(csv_path, encoding="utf-8-sig")
             return df
         except Exception as e:
-            st.error(f"메뉴 데이터를 불러오는 중 에러가 발생했어요: {e}")
+            st.error(f"데이터를 불러오는 중 에러가 발생했어요: {e}")
             return None
     else:
-        st.warning(f"데이터 파일을 찾을 수 없습니다: {csv_path}")
+        # 데이터 파일이 없을 때는 조용히 넘어가도록 수정 (원할 경우 st.warning 복구 가능)
         return None
 
 csv_df = load_csv_data()
 
 if csv_df is not None:
     for _, row in csv_df.iterrows():
-        # CSV 파일에서 가져올 3가지 컬럼값 매칭
+        # CSV 파일에서 가져올 3가지 데이터 (컬럼명에 맞게 매칭)
         cat = str(row.get("카테고리", ""))
         menu_name = str(row.get("메뉴명", ""))
         
+        # 칼로리는 숫자로 변환 (빈칸이거나 숫자가 아니면 0으로 처리)
         try:
             menu_cal = int(row.get("칼로리", 0))
         except (ValueError, TypeError):
             menu_cal = 0
             
+        # 카테고리가 정상적으로 존재하고, 메뉴 이름이 비어있지 않은 경우에만 추가
         if cat in MENU_DATA and menu_name.strip():
-            # 나머지 정보는 코드에서 직접 기본값으로 채움
             MENU_DATA[cat].append({
                 "name": menu_name.strip(),
                 "cal": menu_cal,
-                "emoji": "",             # 기본 이모지 빈 칸
-                "food_type": "기타",     # 기본 음식 종류
-                "delivery": True if cat == "배달 메뉴" else False, # 배달 메뉴 카테고리만 True 자동 적용
-                "budget": "중"           # 기본 가격대
+                "emoji": "",             # 기본 이모지 (빈 칸)
+                "food_type": "기타",     # 기본 음식 종류 (기타)
+                "delivery": True if cat == "배달 메뉴" else False, 
+                "budget": "중"           # 기본 가격대 (중)
             })
 
 FORTUNES = [
@@ -213,7 +214,192 @@ html,body,[class*="css"]{font-family:'Noto Sans KR',sans-serif;}
 .result-card{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border-radius:20px;padding:2.5rem;text-align:center;color:white;margin:1rem 0;box-shadow:0 10px 40px rgba(102,126,234,.4);}
 .result-emoji{font-size:4rem;line-height:1;margin-bottom:.5rem;}
 .result-name{font-size:2.4rem;font-weight:900;margin-bottom:.5rem;}
-.result-cal"> 약 {menu.get('cal', 0)} kcal &nbsp;&nbsp; {method}</div>
+.result-cal{display:inline-block;background:rgba(255,255,255,.25);border-radius:999px;padding:.3rem 1.2rem;font-size:.95rem;font-weight:600;}
+.wc-option{background:white;border:3px solid #ddd;border-radius:16px;padding:1.8rem 1.2rem;text-align:center;transition:all .18s;}
+.wc-option:hover{border-color:#667eea;background:#f8f0ff;}
+.wc-emoji{font-size:2.5rem;}.wc-name{font-size:1.3rem;font-weight:800;margin:.5rem 0;color:#1a1a2e;}.wc-cal{font-size:.85rem;color:#aaa;}
+.hist-item{background:white;border-radius:10px;padding:.7rem 1rem;margin:.3rem 0;border-left:4px solid #667eea;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 6px rgba(0,0,0,.05);font-size:.88rem;color:#111;}
+.rank-card{background:white;border-radius:12px;padding:.8rem 1.1rem;margin:.3rem 0;display:flex;align-items:center;gap:.8rem;box-shadow:0 2px 8px rgba(0,0,0,.07);}
+.cal-bar-wrap{background:#f0f2f8;border-radius:8px;height:12px;overflow:hidden;margin-top:.4rem;}
+.cal-bar{background:linear-gradient(90deg,#667eea,#f5576c);height:12px;border-radius:8px;}
+.info-card{background:white;border-radius:14px;padding:1.2rem;box-shadow:0 4px 14px rgba(0,0,0,.07);}
+.fortune-card{background:linear-gradient(135deg,#f6d365,#fda085);border-radius:20px;padding:2rem;text-align:center;color:white;box-shadow:0 8px 28px rgba(253,160,133,.4);margin-bottom:1rem;}
+.stMarkdown p,label,.stMetric,[data-testid="stMetricLabel"],[data-testid="stMetricValue"]{color:#111!important;}
+[data-testid="stMetricValue"]{color:#1a1a2e!important;}
+hr{border-color:#ddd!important;}
+#MainMenu,footer,header{visibility:hidden;}
+.stButton>button{border-radius:12px!important;font-weight:700!important;font-family:'Noto Sans KR',sans-serif!important;}
+.stTabs [data-baseweb="tab"]{border-radius:10px!important;font-weight:600!important;font-family:'Noto Sans KR',sans-serif!important;}
+
+/* 카드 스타일 (다크모드 지원을 위해 분리) */
+.menu-card { background: white; border-radius: 12px; padding: 0.8rem; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+.menu-card-title { font-size: 0.85rem; font-weight: 700; color: #1a1a2e; margin: 0.3rem 0; }
+.menu-card-cal { font-size: 0.75rem; color: #aaa; }
+</style>
+"""
+
+css_dark_overrides = """
+<style>
+.stApp { background: #121212 !important; }
+[data-testid="stSidebar"] { background: #1a1a2e !important; border-right: 1px solid #333 !important; }
+.sidebar-logo-title { color: #b39ddb !important; }
+.sidebar-logo-sub { color: #666 !important; }
+.sidebar-section-label { color: #555 !important; }
+.method-card, .hist-item, .rank-card, .info-card, .wc-option, .stExpander { background: #1e1e1e !important; color: #eee !important; border: 1px solid #333 !important; }
+.method-card-title, .result-name, .wc-name, b, strong, label, .stMetric, [data-testid="stMetricLabel"], [data-testid="stMetricValue"] { color: #eee !important; }
+h1, h2, h3, h4, h5, h6, .stMarkdown p, .stMarkdown div { color: #eee !important; }
+.method-card-desc, .wc-cal { color: #aaa !important; }
+.cal-bar-wrap { background: #333 !important; }
+.hist-item, .rank-card, .info-card { box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important; }
+.wc-option:hover { background: #2a2a35 !important; border-color: #667eea !important; }
+.stButton>button[kind="secondary"] { color: #eee !important; border-color: #555 !important; background: rgba(255,255,255,0.05) !important; }
+.stTabs [data-baseweb="tab"] p, .stTabs [data-baseweb="tab"] span, .stTabs [data-baseweb="tab"] div,
+button[role="tab"], button[role="tab"] p, button[role="tab"] span { color: #eee !important; }
+[style*="color:#111"], [style*="color:#1a1a2e"], [style*="color:#333"],
+[style*="color: #111"], [style*="color: #1a1a2e"], [style*="color: #333"] { color: #eee !important; }
+
+/* 다크모드 카드 스타일 오버라이드 */
+.menu-card { background: #1e1e1e !important; box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important; border: 1px solid #333 !important; }
+.menu-card-title { color: #eee !important; }
+
+/* 추천 피드의 st.code 및 알림창(st.info 등) 하얀색 배경 완벽 제거 */
+[data-testid="stCodeBlock"] { background-color: #1e1e1e !important; border: 1px solid #333 !important; }
+[data-testid="stCodeBlock"] div, [data-testid="stCodeBlock"] pre, [data-testid="stCodeBlock"] code { background-color: transparent !important; color: #a1c4fd !important; }
+[data-testid="stAlert"] { background-color: #1e1e1e !important; border: 1px solid #333 !important; }
+[data-testid="stAlert"] * { color: #eee !important; }
+
+/* 입력폼 및 선택창 다크모드 대응 */
+div[data-baseweb="select"] > div, div[data-baseweb="base-input"] { background-color: #1e1e1e !important; border-color: #444 !important; }
+div[data-baseweb="select"] * { color: #eee !important; }
+input { background-color: #1e1e1e !important; color: #eee !important; }
+</style>
+"""
+
+if st.session_state.dark_mode:
+    st.markdown(css_base, unsafe_allow_html=True)
+    st.markdown(css_dark_overrides, unsafe_allow_html=True)
+else:
+    st.markdown(css_base, unsafe_allow_html=True)
+
+# ── 사이드바 ─────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("""
+    <div class="sidebar-logo">
+        <div style="font-size:2.2rem"></div>
+        <div class="sidebar-logo-title">오늘의 추천 메뉴</div>
+        <div class="sidebar-logo-sub">맞춤 식단 도우미</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="sidebar-section-label">테마</div>', unsafe_allow_html=True)
+    theme_slider = st.select_slider(
+        "테마",
+        options=[" Light", " Dark"],
+        value=" Dark" if st.session_state.dark_mode else " Light",
+        label_visibility="collapsed"
+    )
+    is_dark = (theme_slider == " Dark")
+    if is_dark != st.session_state.dark_mode:
+        st.session_state.dark_mode = is_dark
+        save_data()
+        st.rerun()
+
+    st.markdown('<div class="sidebar-section-label">음식 카테고리</div>', unsafe_allow_html=True)
+
+    for cat in CATEGORIES:
+        emoji = CATEGORY_EMOJI.get(cat, "")
+        short = cat.replace(" 메뉴", "")
+        is_active = (cat == st.session_state.active_cat)
+        btn_style = "primary" if is_active else "secondary"
+        if st.button(
+            f"{emoji}  {short}",
+            key=f"sidebar_cat_{cat}",
+            use_container_width=True,
+            type=btn_style
+        ):
+            st.session_state.active_cat = cat
+            st.session_state.active_method = None
+            st.session_state.tournament_state = None
+            st.session_state.scratch_revealed = False
+            st.session_state.scratch_menu = None
+            st.session_state._random_result = None
+            st.session_state.battle_result = None
+            st.session_state.tarot_cards = None
+            st.session_state.tarot_chosen = None
+            st.session_state.roulette_done = False
+            st.session_state.roulette_winner = None
+            st.session_state.roulette_winner_idx = 0
+            st.session_state.spinning_now = False
+            st.session_state.dice_winner = None
+            st.rerun()
+
+    st.markdown("---")
+    today = date.today().isoformat()
+    today_entries = [e for e in st.session_state.today_log if e["date"] == today]
+    total_cal_today = sum(e["cal"] for e in today_entries)
+    st.markdown(f"""
+    <div style="padding:0.5rem 0.5rem;text-align:center;">
+        <div style="font-size:0.7rem;color:#aaa;margin-bottom:0.2rem">오늘 섭취 칼로리</div>
+        <div style="font-size:1.3rem;font-weight:900;color:#f5576c">{total_cal_today} kcal</div>
+        <div style="font-size:0.68rem;color:#bbb">목표 2000 kcal 중 {total_cal_today/2000*100:.0f}%</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# ── 헬퍼 ─────────────────────────────────────────────────────
+def get_all_menus():
+    if not isinstance(st.session_state.get("excluded"), set):
+        st.session_state.excluded = set()
+    if not isinstance(st.session_state.get("custom_menus"), list):
+        st.session_state.custom_menus = []
+    base = MENU_DATA.get(st.session_state.active_cat, [])
+    return [m for m in base + st.session_state.custom_menus if m["name"] not in st.session_state.excluded]
+
+def apply_filters(menus):
+    result = menus
+    if st.session_state.filter_food_type != "전체":
+        result = [m for m in result if m.get("food_type") == st.session_state.filter_food_type]
+    if st.session_state.filter_budget != "전체":
+        result = [m for m in result if m.get("budget") == st.session_state.filter_budget]
+    result = [m for m in result if st.session_state.filter_cal_min <= m.get("cal", 0) <= st.session_state.filter_cal_max]
+    return result or menus
+
+def get_menus():
+    return apply_filters(get_all_menus())
+
+def add_history(menu, method):
+    entry = {
+        "menu": menu["name"], "emoji": menu.get("emoji", ""), "cal": menu.get("cal", 0),
+        "method": method, "cat": st.session_state.active_cat,
+        "time": datetime.now().strftime("%m/%d %H:%M"),
+        "hour": datetime.now().hour,
+        "food_type": menu.get("food_type", "기타"),
+    }
+    st.session_state.history.insert(0, entry)
+    if len(st.session_state.history) > 50:
+        st.session_state.history = st.session_state.history[:50]
+    st.session_state.last_result = entry
+    today = date.today().isoformat()
+    st.session_state.today_log.append({
+        "menu": menu["name"], "emoji": menu.get("emoji", ""),
+        "cal": menu.get("cal", 0), "date": today, "time": datetime.now().strftime("%H:%M")
+    })
+    save_data()
+    return menu.get("cal", 0)
+
+def adopt_button(menu, method, key_suffix=""):
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button(f" {menu['name']} (으)로 결정!", key=f"adopt_{key_suffix}", use_container_width=True, type="primary"):
+            add_history(menu, method)
+            st.success(f" **{menu['name']}** 이(가) 오늘의 메뉴로 기록됐어요! {menu.get('cal', 0)} kcal")
+            reset_method()
+            st.rerun()
+
+def result_card(menu, method=""):
+    st.markdown(f"""<div class="result-card">
+        <div class="result-emoji">{menu.get('emoji','')}</div>
+        <div class="result-name">{menu['name']}</div>
+        <div class="result-cal"> 약 {menu.get('cal', 0)} kcal &nbsp;&nbsp; {method}</div>
     </div>""", unsafe_allow_html=True)
 
 def reset_method():
