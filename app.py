@@ -71,6 +71,54 @@ FORTUNES = [
     ("누군가와 함께하고 싶은 날 🤝", "여럿이 나눠 먹기 좋은 메뉴로!"),
 ]
 
+# ── CSV 기반 칼로리 자동 업데이트 함수 (음료 제외, 성능 최적화) ──
+@st.cache_data(show_spinner=False)
+def load_calorie_db():
+    file_name = "20251229_음식DB 19495건.xlsx - 20251229_음식DB_19,495건.csv"
+    cal_mapping = {}
+    if not os.path.exists(file_name):
+        return cal_mapping
+    try:
+        try:
+            df = pd.read_csv(file_name, encoding="utf-8", low_memory=False)
+        except Exception:
+            df = pd.read_csv(file_name, encoding="cp949", low_memory=False)
+            
+        # 1. 음료 및 차류 카테고리 철저히 제외
+        if '식품대분류명' in df.columns:
+            df = df[~df['식품대분류명'].str.contains("음료|차류", na=False)]
+            
+        if '에너지(kcal)' in df.columns and '식품중량' in df.columns:
+            # 2. 1회 제공량(식품중량)을 파싱하여 실제 총 칼로리 계산
+            df['weight_num'] = df['식품중량'].astype(str).str.extract(r'(\d+\.?\d*)')[0].astype(float)
+            df['weight_num'] = df['weight_num'].fillna(100.0)
+            df['total_cal'] = df['에너지(kcal)'] * (df['weight_num'] / 100.0)
+            
+            # 3. MENU_DATA에 있는 고유 음식명 추출하여 매핑 진행
+            unique_menus = set(item['name'] for cat in MENU_DATA.values() for item in cat)
+            for name in unique_menus:
+                # 대표식품명 완전 일치 탐색
+                exact = df[df['대표식품명'] == name] if '대표식품명' in df.columns else pd.DataFrame()
+                if not exact.empty:
+                    cal_mapping[name] = int(exact['total_cal'].mean())
+                else:
+                    # 식품명 부분 일치 탐색 (예: "국밥" -> "순대국밥", "돼지머리국밥" 평균)
+                    partial = df[df['식품명'].str.contains(name, na=False)]
+                    if not partial.empty:
+                        cal_mapping[name] = int(partial['total_cal'].mean())
+    except Exception:
+        pass
+    
+    return cal_mapping
+
+# 동적 칼로리 매핑 적용
+csv_cal_mapping = load_calorie_db()
+if csv_cal_mapping:
+    for cat, items in MENU_DATA.items():
+        for item in items:
+            if item['name'] in csv_cal_mapping:
+                item['cal'] = csv_cal_mapping[item['name']]
+
 # ── 세션 초기화 ───────────────────────────────────────────────
 def init():
     saved_data = load_data()
@@ -86,7 +134,7 @@ def init():
         "today_log": saved_data.get("today_log", []),
         "fortune_today": None, "fortune_date": None,
         "tarot_cards": None, "tarot_chosen": None,
-        "filter_cal_min": 0, "filter_cal_max": 1200,
+        "filter_cal_min": 0, "filter_cal_max": 3000,
         "filter_food_type": "전체", "filter_budget": "전체",
         "roulette_done": False, "roulette_winner": None,
         "roulette_winner_idx": 0,
@@ -392,7 +440,7 @@ st.markdown(f"""<div class="fortune-card">
 with st.expander("🔍 조건 필터", expanded=False):
     fc1, fc2, fc3 = st.columns(3)
     with fc1:
-        cal_range = st.slider("🔥 칼로리 범위 (kcal)", 0, 1200,
+        cal_range = st.slider("🔥 칼로리 범위 (kcal)", 0, 3000,
                               (st.session_state.filter_cal_min, st.session_state.filter_cal_max), 50)
         st.session_state.filter_cal_min, st.session_state.filter_cal_max = cal_range
     with fc2:
@@ -409,7 +457,7 @@ with st.expander("🔍 조건 필터", expanded=False):
     if filtered_count < total_count:
         st.info(f"필터 적용 중: {total_count}개 → **{filtered_count}개** 메뉴 (필터 결과가 0개면 전체 표시)")
     if st.button("🔄 필터 초기화"):
-        st.session_state.filter_cal_min = 0; st.session_state.filter_cal_max = 1200
+        st.session_state.filter_cal_min = 0; st.session_state.filter_cal_max = 3000
         st.session_state.filter_food_type = "전체"
         st.session_state.filter_budget = "전체"; st.rerun()
 
@@ -747,7 +795,6 @@ if(IS_SPINNING){{let frame=0;const totalFrames=25;function step(){{if(frame<tota
 # ── 하단 탭 ──────────────────────────────────────────────────
 st.markdown("<hr style='border:none;border-top:2px solid #ddd;margin:1.5rem 0 1rem'>", unsafe_allow_html=True)
 
-# ▼▼▼ 변경: 추천 피드를 첫 번째 탭으로 이동 ▼▼▼
 tab_feed, tab_hist, tab_tracker, tab_rank, tab_analysis, tab_mgmt = st.tabs([
     "💡 추천 피드", "📋 추천 이력", "🔥 칼로리 트래커", "🏅 메뉴 랭킹", "📊 식습관 분석", "🔧 메뉴 관리"
 ])
