@@ -9,7 +9,7 @@ import json
 import pandas as pd
 import altair as alt
 
-st.set_page_config(page_title="오늘의 추천 메뉴", page_icon="🍽️", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="오늘의 추천 메뉴", page_icon="🍽️", layout="wide", initial_sidebar_state="expanded")
 
 # ── 데이터 영구 저장 함수 ──────────────────────────────────────────
 DATA_FILE = "my_food_data.json"
@@ -116,6 +116,52 @@ css_base = """
 html,body,[class*="css"]{font-family:'Noto Sans KR',sans-serif;}
 .stApp{background:#f0f2f8;}
 .block-container{padding:1.5rem 2rem 2rem!important;max-width:1300px;}
+
+/* ── 사이드바 스타일 ── */
+[data-testid="stSidebar"] {
+    background: #ffffff !important;
+    border-right: 1px solid #e8eaf6 !important;
+}
+[data-testid="stSidebar"] > div:first-child {
+    padding: 1rem 0.5rem !important;
+}
+.sidebar-logo {
+    text-align: center;
+    padding: 0.8rem 1rem 1.2rem;
+    border-bottom: 1px solid #f0f2f8;
+    margin-bottom: 0.5rem;
+}
+.sidebar-logo-title {
+    font-size: 1.15rem;
+    font-weight: 900;
+    color: #7c5cbf;
+    margin-top: 0.3rem;
+}
+.sidebar-logo-sub {
+    font-size: 0.72rem;
+    color: #aaa;
+    margin-top: 0.15rem;
+}
+.sidebar-section-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #bbb;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.8rem 1rem 0.3rem;
+}
+.cat-btn-active {
+    background: linear-gradient(135deg, #9b7fe8, #7c5cbf) !important;
+    color: white !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+}
+.cat-btn-inactive {
+    background: transparent !important;
+    color: #444 !important;
+    border-radius: 10px !important;
+}
+
 .title-pill-wrap{display:flex;justify-content:center;margin-bottom:1.2rem;}
 .title-pill{background:linear-gradient(135deg,#9b7fe8,#7c5cbf);color:white;font-size:1.35rem;font-weight:900;padding:0.6rem 3rem;border-radius:999px;letter-spacing:.05em;box-shadow:0 4px 20px rgba(124,92,191,.35);}
 .stButton>button[kind="secondary"]{background:rgba(255,255,255,.15)!important;border:2px solid rgba(255,255,255,.4)!important;color:#111!important;}
@@ -149,6 +195,10 @@ hr{border-color:#ddd!important;}
 css_dark_overrides = """
 <style>
 .stApp { background: #121212 !important; }
+[data-testid="stSidebar"] { background: #1a1a2e !important; border-right: 1px solid #333 !important; }
+.sidebar-logo-title { color: #b39ddb !important; }
+.sidebar-logo-sub { color: #666 !important; }
+.sidebar-section-label { color: #555 !important; }
 .method-card, .hist-item, .rank-card, .info-card, .wc-option, .stExpander { background: #1e1e1e !important; color: #eee !important; border: 1px solid #333 !important; }
 .method-card-title, .result-name, .wc-name, b, strong, label, .stMetric, [data-testid="stMetricLabel"], [data-testid="stMetricValue"] { color: #eee !important; }
 h1, h2, h3, h4, h5, h6, .stMarkdown p, .stMarkdown div { color: #eee !important; }
@@ -170,13 +220,21 @@ if st.session_state.dark_mode:
 else:
     st.markdown(css_base, unsafe_allow_html=True)
 
-# ── 제목 및 다크모드 ──────────────────────────────────────────
-c1, c2, c3 = st.columns([1, 2, 1])
-with c2:
-    st.markdown('<div class="title-pill-wrap"><div class="title-pill">🍽️ 오늘의 추천 메뉴</div></div>', unsafe_allow_html=True)
-with c3:
+# ── 사이드바 ─────────────────────────────────────────────────
+with st.sidebar:
+    # 로고
+    st.markdown("""
+    <div class="sidebar-logo">
+        <div style="font-size:2.2rem">🍽️</div>
+        <div class="sidebar-logo-title">오늘의 추천 메뉴</div>
+        <div class="sidebar-logo-sub">맞춤 식단 도우미</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 다크모드 토글
+    st.markdown('<div class="sidebar-section-label">테마</div>', unsafe_allow_html=True)
     theme_slider = st.select_slider(
-        "테마 설정",
+        "테마",
         options=["☀️ Light", "🌙 Dark"],
         value="🌙 Dark" if st.session_state.dark_mode else "☀️ Light",
         label_visibility="collapsed"
@@ -186,6 +244,50 @@ with c3:
         st.session_state.dark_mode = is_dark
         save_data()
         st.rerun()
+
+    # 카테고리 목록
+    st.markdown('<div class="sidebar-section-label">음식 카테고리</div>', unsafe_allow_html=True)
+
+    for cat in CATEGORIES:
+        emoji = CATEGORY_EMOJI.get(cat, "🍽️")
+        short = cat.replace(" 메뉴", "")
+        is_active = (cat == st.session_state.active_cat)
+        btn_style = "primary" if is_active else "secondary"
+        if st.button(
+            f"{emoji}  {short}",
+            key=f"sidebar_cat_{cat}",
+            use_container_width=True,
+            type=btn_style
+        ):
+            st.session_state.active_cat = cat
+            # reset method state
+            st.session_state.active_method = None
+            st.session_state.tournament_state = None
+            st.session_state.scratch_revealed = False
+            st.session_state.scratch_menu = None
+            st.session_state._random_result = None
+            st.session_state.battle_result = None
+            st.session_state.tarot_cards = None
+            st.session_state.tarot_chosen = None
+            st.session_state.roulette_done = False
+            st.session_state.roulette_winner = None
+            st.session_state.roulette_winner_idx = 0
+            st.session_state.spinning_now = False
+            st.session_state.dice_winner = None
+            st.rerun()
+
+    # 하단 요약 정보
+    st.markdown("---")
+    today = date.today().isoformat()
+    today_entries = [e for e in st.session_state.today_log if e["date"] == today]
+    total_cal_today = sum(e["cal"] for e in today_entries)
+    st.markdown(f"""
+    <div style="padding:0.5rem 0.5rem;text-align:center;">
+        <div style="font-size:0.7rem;color:#aaa;margin-bottom:0.2rem">오늘 섭취 칼로리</div>
+        <div style="font-size:1.3rem;font-weight:900;color:#f5576c">{total_cal_today} kcal</div>
+        <div style="font-size:0.68rem;color:#bbb">목표 2000 kcal 중 {total_cal_today/2000*100:.0f}%</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ── 헬퍼 ─────────────────────────────────────────────────────
 def get_all_menus():
@@ -268,6 +370,9 @@ def get_fortune():
         random.seed()
     return st.session_state.fortune_today
 
+# ── 메인 영역 제목 ────────────────────────────────────────────
+st.markdown('<div class="title-pill-wrap"><div class="title-pill">🍽️ 오늘의 추천 메뉴</div></div>', unsafe_allow_html=True)
+
 # ── 오늘의 운세 배너 ─────────────────────────────────────────
 fortune_msg, fortune_tip = get_fortune()
 all_menus_flat = [m for cat in MENU_DATA.values() for m in cat]
@@ -283,16 +388,6 @@ st.markdown(f"""<div class="fortune-card">
     </div>
 </div>""", unsafe_allow_html=True)
 
-# ── 카테고리 탭 ──────────────────────────────────────────────
-st.markdown('<div style="background:#d966a0;border-radius:14px;padding:.55rem .8rem;margin-bottom:.6rem;"><span style="color:rgba(255,255,255,.7);font-size:.78rem;font-weight:700">카테고리</span></div>', unsafe_allow_html=True)
-row_a = st.columns(7); row_b = st.columns(7)
-for i, cat in enumerate(CATEGORIES):
-    emoji = CATEGORY_EMOJI.get(cat, "🍽️"); short = cat.replace(" 메뉴", "")
-    with (row_a + row_b)[i]:
-        if st.button(f"{emoji} {short}", key=f"cat_{cat}", use_container_width=True,
-                     type="primary" if cat == st.session_state.active_cat else "secondary"):
-            st.session_state.active_cat = cat; reset_method(); st.rerun()
-
 # ── 조건 필터 바 ─────────────────────────────────────────────
 with st.expander("🔍 조건 필터", expanded=False):
     fc1, fc2, fc3 = st.columns(3)
@@ -305,7 +400,7 @@ with st.expander("🔍 조건 필터", expanded=False):
                           index=["전체", "밥", "면", "고기", "기타"].index(st.session_state.filter_food_type))
         st.session_state.filter_food_type = ft
     with fc3:
-        bd = st.selectbox("💰 예산 (저: 만 오천원 이하, 중: 만 오천원 ~ 3만원, 고: 3만원 이상)", ["전체", "저", "중", "고"],
+        bd = st.selectbox("💰 예산", ["전체", "저", "중", "고"],
                           index=["전체", "저", "중", "고"].index(st.session_state.filter_budget))
         st.session_state.filter_budget = bd
 
@@ -749,8 +844,6 @@ with tab_rank:
     else:
         st.info("채택한 메뉴가 쌓이면 랭킹이 표시돼요!")
 
-
-# ── 📊 식습관 분석 탭 (Altair 적용: 글씨 눕히기 버전) ────────────────────────────────
 with tab_analysis:
     st.markdown("### 📊 나의 식습관 분석")
     if len(st.session_state.history) >= 3:
@@ -758,11 +851,8 @@ with tab_analysis:
         avg_cal = sum(h["cal"] for h in hist) // len(hist)
         max_cal_entry = max(hist, key=lambda h: h["cal"])
         min_cal_entry = min(hist, key=lambda h: h["cal"])
-
-        # 앱 테마(다크/라이트)에 맞춰 차트 글자색 동적 설정
         chart_text_color = "#eeeeee" if st.session_state.dark_mode else "#1a1a2e"
 
-        # ── 상단 요약 카드 ────────────────────────────────────────
         c1, c2, c3 = st.columns(3)
         with c1:
             st.markdown(f"""<div class="info-card" style="text-align:center">
@@ -788,29 +878,21 @@ with tab_analysis:
             </div>""", unsafe_allow_html=True)
 
         st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
-
-        # ── 2) 음식 종류 비율 & 카테고리 비율 ─────────────────
         ch_col1, ch_col2 = st.columns(2)
-        
         with ch_col1:
             st.markdown("#### 🥦 음식 종류 비율")
             type_cnt = Counter(h.get("food_type", "기타") for h in hist)
             df_type = pd.DataFrame([{"종류": k, "횟수": v} for k, v in type_cnt.items()])
-            
-            # 글씨 완전 가로로 눕히기 (labelAngle=0)
             type_chart = alt.Chart(df_type).mark_bar(color="#43e97b", cornerRadiusTopLeft=6, cornerRadiusTopRight=6).encode(
                 x=alt.X('종류', sort='-y', axis=alt.Axis(labelAngle=0, labelColor=chart_text_color, title=None, labelFontSize=13)),
                 y=alt.Y('횟수', axis=alt.Axis(labelColor=chart_text_color, title=None, tickMinStep=1, labelFontSize=12)),
                 tooltip=['종류', '횟수']
             ).properties(height=250)
             st.altair_chart(type_chart, use_container_width=True)
-
         with ch_col2:
             st.markdown("#### 🏷️ 카테고리 비율")
             cat_cnt = Counter(h["cat"].replace(" 메뉴", "") for h in hist)
             df_cat = pd.DataFrame([{"카테고리": k, "횟수": v} for k, v in cat_cnt.items()])
-            
-            # 글씨 대각선으로 예쁘게 눕히기 (labelAngle=-45)
             cat_chart = alt.Chart(df_cat).mark_bar(color="#f093fb", cornerRadiusTopLeft=6, cornerRadiusTopRight=6).encode(
                 x=alt.X('카테고리', sort='-y', axis=alt.Axis(labelAngle=-45, labelColor=chart_text_color, title=None, labelFontSize=13, labelLimit=200)),
                 y=alt.Y('횟수', axis=alt.Axis(labelColor=chart_text_color, title=None, tickMinStep=1, labelFontSize=12)),
@@ -819,26 +901,18 @@ with tab_analysis:
             st.altair_chart(cat_chart, use_container_width=True)
 
         st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
-
-        # ── 3) 최근 10회 칼로리 추이 ────────────────────
         st.markdown(f"#### 📈 최근 칼로리 추이 (평균: {avg_cal} kcal)")
         recent10 = list(reversed(hist[:10]))
         df_trend = pd.DataFrame([{"메뉴": f"{h['emoji']} {h['menu']}", "칼로리": h['cal']} for h in recent10])
-        
-        # 긴 메뉴 이름 대각선으로 눕히고 잘리지 않게 설정 (labelAngle=-45, labelLimit=500)
         trend_chart = alt.Chart(df_trend).mark_line(point=True, color="#f5576c", strokeWidth=3).encode(
             x=alt.X('메뉴', sort=None, axis=alt.Axis(labelAngle=-45, labelColor=chart_text_color, title=None, labelFontSize=13, labelLimit=500)),
             y=alt.Y('칼로리', axis=alt.Axis(labelColor=chart_text_color, title="kcal", labelFontSize=12)),
             tooltip=['메뉴', '칼로리']
         ).properties(height=300)
-        
-        # 평균선 추가
         rule = alt.Chart(pd.DataFrame({'평균': [avg_cal]})).mark_rule(color="#667eea", strokeDash=[5, 5]).encode(y='평균')
         st.altair_chart(trend_chart + rule, use_container_width=True)
 
         st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
-
-        # ── 4) 칼로리 최고/최저 기록 카드 ────────────────────────────────────
         st.markdown("#### 🏆 칼로리 기록")
         st.markdown(f"""<div style="display: flex; gap: 14px; margin-top: 4px;">
             <div style="flex: 1; background: {'#2a2a2a' if st.session_state.dark_mode else '#fff'}; padding: 14px 16px; border-radius: 16px; box-shadow: 0 3px 12px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 12px;">
@@ -858,7 +932,6 @@ with tab_analysis:
                 </div>
             </div>
         </div>""", unsafe_allow_html=True)
-
     else:
         st.info("📊 분석을 위해 메뉴를 3회 이상 채택해보세요!")
 
@@ -913,7 +986,7 @@ with tab_mgmt:
         nc = st.number_input("칼로리 (kcal)", 0, 3000, 500, 50, key="add_cal")
         ne = st.text_input("이모지", "🍽️", max_chars=2, key="add_emoji")
         nft = st.selectbox("음식 종류", ["밥", "면", "고기", "기타"], key="add_ft")
-        nbd = st.selectbox("예산 (저: 만 오천원 이하, 중: 만 오천원 ~ 3만원, 고: 3만원 이상)", ["저", "중", "고"], key="add_bd")
+        nbd = st.selectbox("예산", ["저", "중", "고"], key="add_bd")
         ndv = st.checkbox("배달 가능", key="add_dv")
         if st.button("추가", type="primary"):
             if nm.strip():
