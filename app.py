@@ -65,19 +65,15 @@ CATEGORIES = list(MENU_DATA.keys())
 @st.cache_data
 def load_csv_data():
     csv_path = "data/Detailed_Menu_Data.csv"
-    if os.path.exists(csv_path):
-        try:
-            # 한글 깨짐 방지를 위해 utf-8-sig 사용
-            df = pd.read_csv(csv_path, encoding="utf-8-sig")
-            return df
-        except Exception as e:
-            st.error(f"데이터를 불러오는 중 에러가 발생했어요: {e}")
-            return None
-    else:
-        # 데이터 파일이 없을 때는 조용히 넘어가도록 수정
-        return None
+    if not os.path.exists(csv_path):
+        return None, "❌ CSV 파일 없음 (data/Detailed_Menu_Data.csv)"
+    try:
+        df = pd.read_csv(csv_path, encoding="utf-8-sig")
+        return df, f"✅ CSV 로드 성공 ({len(df)}개 항목)"
+    except Exception as e:
+        return None, f"❌ CSV 오류: {e}"
 
-csv_df = load_csv_data()
+csv_df, csv_status = load_csv_data()
 
 # CSV 카테고리 키워드 → 앱 카테고리 매핑
 KEYWORD_TO_CAT = {
@@ -370,7 +366,14 @@ with st.sidebar:
             st.session_state.dice_winner = None
             st.rerun()
 
+  # 이렇게 교체
     st.markdown("---")
+    status_color = "#4caf50" if csv_df is not None else "#f44336"
+    st.markdown(f"""
+    <div style="padding:0.3rem 0.5rem;text-align:center;">
+        <div style="font-size:0.68rem;color:{status_color}">{csv_status}</div>
+    </div>
+    """, unsafe_allow_html=True)
     today = date.today().isoformat()
     today_entries = [e for e in st.session_state.today_log if e["date"] == today]
     total_cal_today = sum(e["cal"] for e in today_entries)
