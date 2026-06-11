@@ -1254,18 +1254,23 @@ with tab_analysis:
             st.markdown("#### 🥦 음식 종류 비율")
             type_cnt = Counter(h.get("food_type", "기타") for h in hist)
             df_type = pd.DataFrame([{"종류": k, "횟수": v} for k, v in type_cnt.items()])
+            
+            # 여기서 labelAngle=0 설정 (글자 똑바로 표시)
             type_chart = alt.Chart(df_type).mark_bar(color="#43e97b", cornerRadiusTopLeft=6, cornerRadiusTopRight=6).encode(
                 x=alt.X('종류', sort='-y', axis=alt.Axis(labelAngle=0, labelColor=chart_text_color, title=None, labelFontSize=13)),
                 y=alt.Y('횟수', axis=alt.Axis(labelColor=chart_text_color, title=None, tickMinStep=1, labelFontSize=12)),
                 tooltip=['종류', '횟수']
             ).properties(height=250)
             st.altair_chart(type_chart, use_container_width=True)
+            
         with ch_col2:
             st.markdown("#### 🏷️ 카테고리 비율")
             cat_cnt = Counter(h["cat"].replace(" 메뉴", "") for h in hist)
             df_cat = pd.DataFrame([{"카테고리": k, "횟수": v} for k, v in cat_cnt.items()])
+            
+            # 여기서 labelAngle을 -45에서 0으로 변경했습니다 (보라색 그래프 텍스트 똑바로 표시)
             cat_chart = alt.Chart(df_cat).mark_bar(color="#f093fb", cornerRadiusTopLeft=6, cornerRadiusTopRight=6).encode(
-                x=alt.X('카테고리', sort='-y', axis=alt.Axis(labelAngle=-45, labelColor=chart_text_color, title=None, labelFontSize=13, labelLimit=200)),
+                x=alt.X('카테고리', sort='-y', axis=alt.Axis(labelAngle=0, labelColor=chart_text_color, title=None, labelFontSize=13, labelLimit=200)),
                 y=alt.Y('횟수', axis=alt.Axis(labelColor=chart_text_color, title=None, tickMinStep=1, labelFontSize=12)),
                 tooltip=['카테고리', '횟수']
             ).properties(height=250)
@@ -1275,8 +1280,10 @@ with tab_analysis:
         st.markdown(f"#### 📈 최근 칼로 추이 (평균: {avg_cal} kcal)")
         recent10 = list(reversed(hist[:10]))
         df_trend = pd.DataFrame([{"메뉴": f"{h['emoji']} {h['menu']}", "칼로리": h['cal']} for h in recent10])
+        
+        # 여기서도 labelAngle을 -45에서 0으로 변경했습니다 (꺾은선 그래프 텍스트 똑바로 표시)
         trend_chart = alt.Chart(df_trend).mark_line(point=True, color="#f5576c", strokeWidth=3).encode(
-            x=alt.X('메뉴', sort=None, axis=alt.Axis(labelAngle=-45, labelColor=chart_text_color, title=None, labelFontSize=13, labelLimit=500)),
+            x=alt.X('메뉴', sort=None, axis=alt.Axis(labelAngle=0, labelColor=chart_text_color, title=None, labelFontSize=13, labelLimit=500)),
             y=alt.Y('칼로리', axis=alt.Axis(labelColor=chart_text_color, title="kcal", labelFontSize=12)),
             tooltip=['메뉴', '칼로리']
         ).properties(height=300)
