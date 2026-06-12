@@ -41,9 +41,11 @@ Eight interactive ways to pick your next meal — no more boring scrolling:
 
 | Type | Details |
 |---|---|
-| Source data | Korean Food Nutrition Database |
+| Source data | Korean Food Nutrition Database (식품영양성분 데이터베이스) |
 | Collected data | Menus selected by the user |
 | Usage | Eating habit analysis & personalized recommendations |
+
+> **Note:** While the original data source is the Korean Food Nutrition Database, the app uses a preprocessed and refined version of that data.
 
 ---
 
