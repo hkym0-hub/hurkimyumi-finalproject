@@ -467,7 +467,7 @@ def get_fortune():
     return st.session_state.fortune_today
 
 # ── 메인 영역 제목 ────────────────────────────────────────────
-st.markdown('<div class="title-pill-wrap"><<div class="title-pill"> 메뉴 추천 및 식습관 분석 앱</div></div>', unsafe_allow_html=True)
+st.markdown('<div class="title-pill-wrap"><div class="title-pill"> 메뉴 추천 및 식습관 분석 앱</div></div>', unsafe_allow_html=True)
 
 # ── 오늘의 운세 배너 ─────────────────────────────────────────
 fortune_msg, fortune_tip = get_fortune()
