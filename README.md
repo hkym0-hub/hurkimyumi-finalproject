@@ -1,6 +1,6 @@
-# 🍽️ Today's Menu
+# 🍽️ Menu Recommendation App
 
-**Today's Menu** is a meal recommendation app that reduces decision fatigue through gamification and helps users visualize their eating habits over time.
+**Menu Recommendation App** is a meal recommendation app that reduces decision fatigue through gamification and helps users visualize their eating habits over time.
 
 > **Problem → Solution flow:**
 > Meal decisions take too long → Decision fatigue → Gamified selection → Menu chosen → Eating habit analysis delivered
