@@ -68,9 +68,11 @@ streamlit run app.py
 
 ```
 menu_app/
-├── app.py              # Main application logic
-├── requirements.txt    # Dependencies
-├── README.md           # Project documentation
-└── .streamlit/
-    └── config.toml     # App theme & settings
+├── app.py                    # Main application logic
+├── requirements.txt          # Dependencies
+├── README.md                 # Project documentation
+└── data/
+    ├── Detailed_Menu_Data.csv  # Preprocessed menu nutrition data
+    ├── data explanation        # Data field descriptions
+    └── presentation.pptx       # Project presentation
 ```
