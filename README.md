@@ -1,148 +1,39 @@
-# 🍽️ Today's Menu
+🍽️ Today's Menu
+Today's Menu is a meal recommendation app that reduces decision fatigue through gamification and helps users visualize their eating habits over time.
 
-A gamified menu recommendation web application designed to reduce the stress of choosing what to eat. Instead of endlessly scrolling through delivery apps or asking friends for suggestions, users can enjoy interactive game-based recommendation systems and build personalized eating habits through their meal selections.
+Problem → Solution flow:
+Meal decisions take too long → Decision fatigue → Gamified selection → Menu chosen → Eating habit analysis delivered
 
-## 🎯 Project Goal
 
-Many people experience decision fatigue when choosing meals every day.
+✨ Key Features
+1. Filtering & Decision System
 
-This project aims to:
+Smart Filter — Customize recommendations by calorie range, food category, dining style (delivery / home cooking), and budget.
+Safety Net — Automatically resets search criteria when no results match your filters, so you never hit a dead end.
 
-* Reduce menu selection stress through gamification.
-* Make the decision-making process more enjoyable.
-* Collect user meal choices and visualize eating habits.
-* Provide personalized menu recommendations based on accumulated data.
+2. Gamified Recommendation Methods
+Eight interactive ways to pick your next meal — no more boring scrolling:
+ModeDescription🎲 RandomInstant random pick🎡 RouletteSpin-the-wheel selection🃏 Scratch CardScratch to reveal your meal🏆 World Cup1-on-1 knockout tournament🎲 DiceRoll to decide🃏 Tarot DrawDraw a card for your fate🧠 Smart RecommendAI-style picks based on your last 10 selections⚔️ Battle ModeHead-to-head menu showdown
+3. Statistics & Habit Management
 
-### Problem Solving Flow
+Recommendation History — Stores and analyzes up to 50 recent meal selections.
+Calorie & Habit Analysis — Tracks daily intake against a 2,000 kcal goal; surfaces insights on preferred categories and peak meal times.
+Custom Settings — Add your own menus or exclude specific items from the recommendation pool.
 
-Menu Decision Takes Too Long
-➡️ Decision Fatigue
-➡️ Gamified Recommendation System
-➡️ Faster Menu Selection
-➡️ Meal Choice Data Collection
-➡️ Eating Habit Analysis & Personalized Recommendations
 
----
+📊 Data
+TypeDetailsSource dataKorean Food Nutrition DatabaseCollected dataMenus selected by the userUsageEating habit analysis & personalized recommendations
 
-## ✨ Key Features
+🔄 User Flow
+Select Category → Choose Recommendation Mode → Play Game → Get Result → Confirm → Data reflected in habit analysis & recommendation feed
 
-### 1. Smart Menu Filtering
-
-Users can customize recommendations using various conditions:
-
-* Calorie range
-* Food category
-* Dining style (delivery or cooking)
-* Budget range
-
-#### Safety Net System
-
-If no menu matches the selected filters, the system automatically resets the search criteria to ensure recommendations are always available.
-
----
-
-### 2. Gamified Recommendation Methods
-
-Instead of a simple random list, users can choose meals through interactive mini-games.
-
-#### Engagement-Based Methods
-
-* 🎲 Random Selection
-* 🎡 Roulette Wheel
-* 🃏 Scratch Card
-* 🏆 Menu World Cup Tournament
-
-#### Utility-Based Methods
-
-* 🎲 Dice Roll
-* 🃏 Tarot Card Draw
-* 🧠 Smart Recommendation
-* ⚔️ Battle Mode
-
-Each method offers a unique experience while leading users toward a final menu choice.
-
----
-
-### 3. User Habit Tracking & Analytics
-
-#### Meal Adoption System
-
-When a user accepts a recommended menu, it is recorded as an actual meal choice.
-
-This data is then used to:
-
-* Analyze eating habits
-* Generate personalized recommendation feeds
-* Track food preferences over time
-
-#### Statistics Dashboard
-
-* Recent recommendation history (up to 50 entries)
-* Daily calorie tracking
-* Favorite food category analysis
-* Peak meal-time analysis
-
----
-
-### 4. Custom Menu Management
-
-Users can:
-
-* Add custom menus
-* Exclude unwanted menus
-* Personalize their recommendation pool
-
----
-
-## 📊 Data Utilization
-
-### External Data
-
-* Korean Food Composition Database (Food Safety Korea)
-* Food calorie and nutritional information
-
-### Collected User Data
-
-* Adopted menu selections
-* Recommendation history
-* Food preference patterns
-
-### Data Usage
-
-* Display calorie information for recommended menus
-* Analyze user eating habits
-* Generate personalized menu recommendations
-
----
-
-## 🔄 User Flow
-
-1. Select menu category
-2. Choose recommendation method
-3. Play the recommendation game
-4. Receive menu result
-5. Accept the menu
-6. Save meal data
-7. Update habit analysis and recommendation feed
-
----
-
-## 🚀 How to Run
-
-### Local Execution
-
-```bash
-pip install -r requirements.txt
+🚀 Getting Started
+bashpip install -r requirements.txt
 streamlit run app.py
-```
-
-## 📁 Project Structure
-
-```text
-menu_app
+Project Structure
+menu_app/
 ├── app.py              # Main application logic
-├── requirements.txt    # Dependency packages
+├── requirements.txt    # Dependencies
 ├── README.md           # Project documentation
 └── .streamlit/
-    └── config.toml     # Streamlit configuration
-```
+    └── config.toml     # App theme & settings
