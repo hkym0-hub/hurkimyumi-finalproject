@@ -9,7 +9,7 @@ import json
 import pandas as pd
 import altair as alt
 
-st.set_page_config(page_title="오늘의 추천 메뉴", page_icon="🍽️", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="메뉴 추천 및 식습관 분석 앱", page_icon="🍽️", layout="wide", initial_sidebar_state="expanded")
 
 # ── 데이터 영구 저장 함수 ──────────────────────────────────────────
 DATA_FILE = "my_food_data.json"
@@ -319,7 +319,7 @@ with st.sidebar:
     st.markdown("""
     <div class="sidebar-logo">
         <div style="font-size:2.2rem"></div>
-        <div class="sidebar-logo-title">오늘의 추천 메뉴</div>
+        <div class="sidebar-logo-title">메뉴 추천 및 식습관 분석 앱</div>
         <div class="sidebar-logo-sub">맞춤 식단 도우미</div>
     </div>
     """, unsafe_allow_html=True)
@@ -467,7 +467,7 @@ def get_fortune():
     return st.session_state.fortune_today
 
 # ── 메인 영역 제목 ────────────────────────────────────────────
-st.markdown('<div class="title-pill-wrap"><div class="title-pill"> 오늘의 추천 메뉴</div></div>', unsafe_allow_html=True)
+st.markdown('<div class="title-pill-wrap"><<div class="title-pill"> 메뉴 추천 및 식습관 분석 앱</div></div>', unsafe_allow_html=True)
 
 # ── 오늘의 운세 배너 ─────────────────────────────────────────
 fortune_msg, fortune_tip = get_fortune()
