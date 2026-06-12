@@ -73,6 +73,5 @@ menu_app/
 ├── README.md                 # Project documentation
 └── data/
     ├── Detailed_Menu_Data.csv  # Preprocessed menu nutrition data
-    ├── data explanation        # Data field descriptions
     └── presentation.pptx       # Project presentation
 ```
